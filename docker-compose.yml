@@ -1,0 +1,60 @@
+services:
+  # Backend Node.js
+  backend:
+    container_name: node-backend2
+    image: node:20
+    working_dir: /app
+    volumes:
+      - ./node:/app
+    ports:
+      - "3000:3000"
+    environment:
+      JWT_SECRET: "dev-only-insecure-secret-change-me"
+    command: sh -c "npm install && npm start"
+    depends_on:
+      - db
+
+  # Frontend React
+  frontend:
+    container_name: react-frontend2
+    image: node:20
+    working_dir: /app
+    volumes:
+      - ./react:/app
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install && npm run dev"
+    depends_on:
+      - backend
+
+  # Database PostgreSQL
+  db:
+    container_name: postgres-db2
+    image: postgres:16
+    restart: no
+    environment:
+      POSTGRES_USER: justthisuser
+      POSTGRES_PASSWORD: mysqlpass1122
+      POSTGRES_DB: my_database
+    ports:
+      - "5432:5432"
+    volumes:
+      - D:/DataDocker/postgres2:/var/lib/postgresql/data
+
+  # pgAdmin
+  pgadmin2:
+    container_name: pgadmin2
+    image: dpage/pgadmin4
+    restart: no
+    ports:
+      - "8000:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@test.com
+      PGADMIN_DEFAULT_PASSWORD: adminpassword
+    volumes:
+    - pgadmin_data2:/var/lib/pgadmin
+    depends_on:
+      - db
+
+volumes:
+  pgadmin_data2:
