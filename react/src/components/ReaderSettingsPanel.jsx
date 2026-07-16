@@ -1,4 +1,5 @@
 import { useLanguage } from "../context/LanguageContext";
+import { ZOOM_MIN, ZOOM_MAX, ZOOM_BUTTON_STEP, ZOOM_SLIDER_STEP } from "../hooks/useReaderSettings";
 
 export default function ReaderSettingsPanel({
   settings,
@@ -6,9 +7,11 @@ export default function ReaderSettingsPanel({
   setDoublePage,
   setDirection,
   setShowProgress,
+  setZoom,
   onClose,
 }) {
   const { t } = useLanguage();
+  const zoomFillPercent = ((settings.zoom - ZOOM_MIN) / (ZOOM_MAX - ZOOM_MIN)) * 100;
 
   return (
     <div className="settings-overlay" onClick={onClose}>
@@ -88,6 +91,53 @@ export default function ReaderSettingsPanel({
               onClick={() => setShowProgress(false)}
             >
               {t("common.off")}
+            </button>
+          </div>
+        </div>
+
+        <div className="settings-row settings-row-zoom">
+          <span className="settings-label">
+            {t("reader.zoom")} ({settings.zoom}%)
+          </span>
+          <div className="zoom-control">
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm zoom-reset-btn"
+              onClick={() => setZoom(100)}
+              disabled={settings.zoom === 100}
+            >
+              {t("common.reset")}
+            </button>
+            <button
+              type="button"
+              className="zoom-btn"
+              onClick={() => setZoom(settings.zoom - ZOOM_BUTTON_STEP)}
+              disabled={settings.zoom <= ZOOM_MIN}
+              aria-label={t("reader.zoomOut")}
+            >
+              &minus;
+            </button>
+            <input
+              type="range"
+              className="zoom-slider"
+              min={ZOOM_MIN}
+              max={ZOOM_MAX}
+              step={ZOOM_SLIDER_STEP}
+              value={settings.zoom}
+              onChange={(e) => setZoom(Number(e.target.value))}
+              aria-label={t("reader.zoom")}
+              style={{
+                background: `linear-gradient(to right, var(--accent) ${zoomFillPercent}%, var(--border) ${zoomFillPercent}%)`,
+              }}
+            />
+            <button
+              type="button"
+              className="zoom-btn"
+              onClick={() => setZoom(settings.zoom + ZOOM_BUTTON_STEP)}
+              disabled={settings.zoom >= ZOOM_MAX}
+              aria-label={t("reader.zoomIn")}
+            >
+              +
             </button>
           </div>
         </div>

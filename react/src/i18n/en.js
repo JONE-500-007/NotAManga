@@ -45,6 +45,9 @@ export default {
   "reader.nextChapterPrompt": "You've reached the end of this chapter.",
   "reader.selectChapter": "Select chapter",
   "reader.showProgress": "Progress bar",
+  "reader.zoom": "Zoom",
+  "reader.zoomIn": "Zoom in",
+  "reader.zoomOut": "Zoom out",
 
   "uploadManga.title": "Upload New Manga",
   "uploadManga.titleLabel": "Title",
@@ -94,6 +97,7 @@ export default {
   "common.delete": "Delete",
   "common.cancel": "Cancel",
   "common.close": "Close",
+  "common.reset": "Reset",
   "common.on": "On",
   "common.off": "Off",
 };

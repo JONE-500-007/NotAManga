@@ -45,6 +45,9 @@ export default {
   "reader.nextChapterPrompt": "อ่านจบตอนนี้แล้ว",
   "reader.selectChapter": "เลือกตอน",
   "reader.showProgress": "แถบความคืบหน้า",
+  "reader.zoom": "ซูม",
+  "reader.zoomIn": "ซูมเข้า",
+  "reader.zoomOut": "ซูมออก",
 
   "uploadManga.title": "เพิ่มการ์ตูนเรื่องใหม่",
   "uploadManga.titleLabel": "ชื่อเรื่อง",
@@ -94,6 +97,7 @@ export default {
   "common.delete": "ลบ",
   "common.cancel": "ยกเลิก",
   "common.close": "ปิด",
+  "common.reset": "รีเซ็ต",
   "common.on": "เปิด",
   "common.off": "ปิด",
 };

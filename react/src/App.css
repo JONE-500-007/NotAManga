@@ -627,6 +627,7 @@ input[type="file"]::file-selector-button:hover {
   justify-content: center;
   position: relative;
   padding: 20px 0;
+  overflow: auto;
 }
 
 .reader-content-with-bottom-bar {
@@ -634,7 +635,11 @@ input[type="file"]::file-selector-button:hover {
 }
 
 .reader-image {
-  max-height: calc(100svh - 100px);
+  /* Zoom is applied once, at the container level (.reader-spread /
+     .reader-longstrip-group already scale their max-width by --reader-zoom),
+     so the image itself just fills 100% of that already-scaled container —
+     multiplying by --reader-zoom again here would compound it quadratically. */
+  max-height: calc((100svh - 100px) * var(--reader-zoom, 1));
   max-width: 100%;
   border-radius: 4px;
 }
@@ -676,9 +681,17 @@ input[type="file"]::file-selector-button:hover {
 }
 
 .reader-settings-btn {
-  padding: 6px 10px;
-  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-size: 18px;
   line-height: 1;
+}
+
+.reader-settings-label {
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .reader-bottom-bar {
@@ -693,6 +706,8 @@ input[type="file"]::file-selector-button:hover {
   padding: 10px 20px;
   background: var(--surface);
   border-top: 1px solid var(--border);
+  will-change: transform;
+  transition: transform 0.1s linear;
 }
 
 .reader-bottom-progress-track {
@@ -728,7 +743,7 @@ input[type="file"]::file-selector-button:hover {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  max-width: 100%;
+  max-width: calc(100% * var(--reader-zoom, 1));
   cursor: pointer;
 }
 
@@ -745,20 +760,22 @@ input[type="file"]::file-selector-button:hover {
 
 .reader-longstrip-group {
   width: 100%;
-  max-width: 720px;
+  max-width: calc(720px * var(--reader-zoom, 1));
 }
 
 .reader-longstrip-group.reader-spread-double {
-  max-width: 960px;
+  max-width: calc(960px * var(--reader-zoom, 1));
 }
 
 .reader-longstrip-group .reader-image {
   max-height: none;
+  max-width: none;
   width: 100%;
 }
 
 .reader-longstrip-group.reader-spread-double .reader-image {
   width: auto;
+  max-width: none;
   flex: 1;
 }
 
@@ -873,6 +890,80 @@ input[type="file"]::file-selector-button:hover {
   background: var(--accent);
   color: #14151a;
   font-weight: 600;
+}
+
+.zoom-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zoom-reset-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.zoom-btn {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zoom-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.zoom-btn:not(:disabled):hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.zoom-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border);
+  outline: none;
+  cursor: pointer;
+}
+
+.zoom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--surface);
+  cursor: pointer;
+}
+
+.zoom-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--surface);
+  cursor: pointer;
+}
+
+.zoom-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: transparent;
 }
 
 /* Manga detail tabs + Art gallery */
@@ -1041,6 +1132,10 @@ input[type="file"]::file-selector-button:hover {
 /* Mobile responsive adjustments */
 
 @media (max-width: 640px) {
+  .settings-row-zoom {
+    display: none;
+  }
+
   .navbar {
     padding: 10px 12px;
     gap: 10px;
@@ -1117,6 +1212,15 @@ input[type="file"]::file-selector-button:hover {
 
   .reader-back-label {
     display: none;
+  }
+
+  .reader-settings-label {
+    display: none;
+  }
+
+  .reader-settings-btn {
+    padding: 8px 10px;
+    font-size: 16px;
   }
 
   .reader-topbar-right {

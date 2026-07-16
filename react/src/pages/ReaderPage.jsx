@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { useLanguage } from "../context/LanguageContext";
@@ -18,7 +18,7 @@ export default function ReaderPage() {
   const { mangaId, chapterId } = useParams();
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const { settings, setMode, setDoublePage, setDirection, setShowProgress } = useReaderSettings();
+  const { settings, setMode, setDoublePage, setDirection, setShowProgress, setZoom } = useReaderSettings();
 
   const [chapter, setChapter] = useState(null);
   const [chapterList, setChapterList] = useState([]);
@@ -29,6 +29,9 @@ export default function ReaderPage() {
 
   const groupRefs = useRef([]);
   const hideTimerRef = useRef(null);
+  const bottomBarRef = useRef(null);
+  const imageAreaRef = useRef(null);
+  const prevZoomRef = useRef(settings.zoom);
 
   useEffect(() => {
     setChapter(null);
@@ -94,15 +97,29 @@ export default function ReaderPage() {
   useEffect(() => {
     if (settings.mode !== "longStrip" || !chapter) return;
 
+    // Track every observed group's latest ratio (not just the ones in the
+    // current callback batch) so "most visible" is always computed from a
+    // complete, up-to-date picture — avoids flicker during scroll when only
+    // some elements cross a threshold in a given callback.
+    const ratios = new Map();
+
     const observer = new IntersectionObserver(
       (entries) => {
-        const visible = entries.filter((e) => e.isIntersecting);
-        if (visible.length === 0) return;
-        const best = visible.reduce((a, b) => (a.intersectionRatio > b.intersectionRatio ? a : b));
-        const index = Number(best.target.dataset.index);
-        setVisibleGroupIndex(index);
+        entries.forEach((entry) => {
+          ratios.set(entry.target, entry.isIntersecting ? entry.intersectionRatio : 0);
+        });
+
+        let bestIndex = null;
+        let bestRatio = 0;
+        ratios.forEach((ratio, el) => {
+          if (ratio > bestRatio) {
+            bestRatio = ratio;
+            bestIndex = Number(el.dataset.index);
+          }
+        });
+        if (bestIndex !== null) setVisibleGroupIndex(bestIndex);
       },
-      { threshold: [0.25, 0.5, 0.75, 1] }
+      { threshold: [0, 0.25, 0.5, 0.75, 1] }
     );
 
     groupRefs.current.forEach((el) => el && observer.observe(el));
@@ -140,6 +157,50 @@ export default function ReaderPage() {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     };
   }, [showChrome]);
+
+  // Mobile browsers (notably iOS Chrome/Safari) can leave `position: fixed`
+  // elements mispositioned when their auto-hiding toolbar collapses/expands,
+  // because "fixed" is computed against a layout viewport that briefly goes
+  // stale during the transition. Track the real visual viewport and nudge
+  // the bottom bar to match it instead of trusting `bottom: 0` alone.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const bar = bottomBarRef.current;
+    if (!vv || !bar) return;
+
+    const reposition = () => {
+      const offset = window.innerHeight - vv.height - vv.offsetTop;
+      bar.style.transform = offset > 0.5 ? `translateY(-${offset}px)` : "";
+    };
+
+    vv.addEventListener("resize", reposition);
+    vv.addEventListener("scroll", reposition);
+    reposition();
+
+    return () => {
+      vv.removeEventListener("resize", reposition);
+      vv.removeEventListener("scroll", reposition);
+    };
+  }, [settings.showProgress]);
+
+  // Changing zoom rescales every page uniformly, which shifts scroll-based
+  // content underneath the viewport (the page you were reading visually
+  // "jumps"). Since all content scales by the same factor, compensate by
+  // scaling the current scroll offset by the same ratio, so the same
+  // reading position stays under the viewport before and after the resize.
+  useLayoutEffect(() => {
+    const prevZoom = prevZoomRef.current;
+    prevZoomRef.current = settings.zoom;
+    if (prevZoom === settings.zoom) return;
+
+    const ratio = settings.zoom / prevZoom;
+    if (settings.mode === "longStrip") {
+      window.scrollTo(0, window.scrollY * ratio);
+    } else if (imageAreaRef.current) {
+      imageAreaRef.current.scrollTop *= ratio;
+      imageAreaRef.current.scrollLeft *= ratio;
+    }
+  }, [settings.zoom, settings.mode]);
 
   const currentGroup = settings.mode === "longStrip" ? groups[visibleGroupIndex] : groups[groupIndex];
   const currentPageDisplay = formatGroupLabel(currentGroup);
@@ -188,7 +249,7 @@ export default function ReaderPage() {
   };
 
   return (
-    <div className="reader-page">
+    <div className="reader-page" style={{ "--reader-zoom": settings.zoom / 100 }}>
       <div className={`reader-chrome${chromeVisible ? "" : " chrome-hidden"}`}>
         <div className="reader-topbar">
           <Link to={`/manga/${mangaId}`} className="btn btn-ghost">
@@ -225,14 +286,17 @@ export default function ReaderPage() {
               onClick={() => setShowSettings(true)}
               aria-label={t("reader.settings")}
             >
-              ⚙
+              ⚙ <span className="reader-settings-label">{t("reader.settings")}</span>
             </button>
           </div>
         </div>
       </div>
 
       {settings.mode === "paged" ? (
-        <div className={`reader-image-area${settings.showProgress ? " reader-content-with-bottom-bar" : ""}`}>
+        <div
+          ref={imageAreaRef}
+          className={`reader-image-area${settings.showProgress ? " reader-content-with-bottom-bar" : ""}`}
+        >
           <button
             className="reader-nav-zone reader-nav-prev"
             onClick={goLeftZone}
@@ -294,7 +358,7 @@ export default function ReaderPage() {
       )}
 
       {settings.showProgress && (
-        <div className="reader-bottom-bar">
+        <div className="reader-bottom-bar" ref={bottomBarRef}>
           <div
             className="reader-bottom-progress-track"
             onClick={handleProgressSeek}
@@ -319,6 +383,7 @@ export default function ReaderPage() {
           setDoublePage={setDoublePage}
           setDirection={setDirection}
           setShowProgress={setShowProgress}
+          setZoom={setZoom}
           onClose={() => setShowSettings(false)}
         />
       )}
