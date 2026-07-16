@@ -1,16 +1,10 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const pool = require("../db/pool");
-const { sign } = require("../utils/jwt");
+const { sign, COOKIE_OPTIONS } = require("../utils/jwt");
 const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
-
-const COOKIE_OPTIONS = {
-  httpOnly: true,
-  sameSite: "lax",
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-};
 
 router.post("/login", async (req, res) => {
   const { username, password } = req.body;

@@ -1,4 +1,4 @@
-const { verify } = require("../utils/jwt");
+const { verify, sign, COOKIE_OPTIONS } = require("../utils/jwt");
 const pool = require("../db/pool");
 
 function requireAuth(req, res, next) {
@@ -7,6 +7,9 @@ function requireAuth(req, res, next) {
 
   try {
     req.user = verify(token);
+    // Sliding session: every authenticated request extends the cookie's
+    // expiry, so active users stay logged in and idle ones time out.
+    res.cookie("token", sign(req.user), COOKIE_OPTIONS);
     next();
   } catch {
     res.status(401).json({ error: "Invalid or expired session" });
