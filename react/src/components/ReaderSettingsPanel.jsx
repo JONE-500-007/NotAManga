@@ -41,7 +41,7 @@ export default function ReaderSettingsPanel({
           </div>
         </div>
 
-        <div className="settings-row">
+        <div className="settings-row settings-row-doublepage">
           <span className="settings-label">{t("reader.doublePage")}</span>
           <div className="settings-toggle-group">
             <button

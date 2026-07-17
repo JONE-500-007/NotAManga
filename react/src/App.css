@@ -744,11 +744,6 @@ input[type="file"]::file-selector-button:hover {
   justify-content: center;
   gap: 4px;
   max-width: calc(100% * var(--reader-zoom, 1));
-  cursor: pointer;
-}
-
-.reader-spread-double .reader-image {
-  max-width: 48%;
 }
 
 .reader-longstrip {
@@ -776,6 +771,11 @@ input[type="file"]::file-selector-button:hover {
 .reader-longstrip-group.reader-spread-double .reader-image {
   width: auto;
   max-width: none;
+  /* min-width:auto is the flex default; without overriding it to 0, a flex
+     item never shrinks below its intrinsic (unzoomed) image size, so these
+     pages ignored flex-grow/shrink entirely and rendered at natural size,
+     overflowing the group instead of sharing its width. */
+  min-width: 0;
   flex: 1;
 }
 
@@ -794,10 +794,11 @@ input[type="file"]::file-selector-button:hover {
 .settings-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
   z-index: 50;
   display: flex;
   justify-content: flex-end;
+  /* No dark backdrop, so the manga page stays fully visible while the panel
+     is open; clicking anywhere outside the panel still closes it. */
 }
 
 .settings-panel {
@@ -812,6 +813,7 @@ input[type="file"]::file-selector-button:hover {
   gap: 24px;
   overflow-y: auto;
   animation: settings-fade-in 0.15s ease-out;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.25);
 }
 
 @keyframes settings-fade-in {
@@ -1132,7 +1134,8 @@ input[type="file"]::file-selector-button:hover {
 /* Mobile responsive adjustments */
 
 @media (max-width: 640px) {
-  .settings-row-zoom {
+  .settings-row-zoom,
+  .settings-row-doublepage {
     display: none;
   }
 

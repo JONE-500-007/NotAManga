@@ -7,12 +7,18 @@ export const ZOOM_MAX = 200;
 export const ZOOM_BUTTON_STEP = 10; // -/+ button click increment
 export const ZOOM_SLIDER_STEP = 1; // free-drag granularity
 
+// Matches the breakpoint the Reader settings panel itself uses to hide the
+// zoom/double-page controls on phones (see .settings-row-zoom in App.css).
+const MOBILE_BREAKPOINT_QUERY = "(max-width: 640px)";
+
 function loadSettings() {
+  const isMobile = typeof window !== "undefined" && window.matchMedia(MOBILE_BREAKPOINT_QUERY).matches;
+  const defaults = { ...DEFAULTS, showProgress: !isMobile };
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    return { ...DEFAULTS, ...stored };
+    return { ...defaults, ...stored };
   } catch {
-    return DEFAULTS;
+    return defaults;
   }
 }
 

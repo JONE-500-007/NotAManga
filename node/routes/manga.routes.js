@@ -93,6 +93,7 @@ router.post(
   "/manga/:mangaId/chapters",
   requireAuth,
   requireRole("uploader"),
+  requireMangaOwner,
   chapterPagesUpload.array("pages"),
   async (req, res) => {
     const { mangaId } = req.params;
