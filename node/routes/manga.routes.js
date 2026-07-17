@@ -22,6 +22,16 @@ router.get("/manga", requireAuth, async (req, res) => {
   res.json(result.rows);
 });
 
+// Must be registered before GET /manga/:mangaId, otherwise "mine" would be
+// captured as a mangaId.
+router.get("/manga/mine", requireAuth, requireRole("uploader", "admin"), async (req, res) => {
+  const result = await pool.query(
+    "SELECT id, title, cover_path FROM manga WHERE uploader_id = $1 ORDER BY created_at DESC",
+    [req.user.id]
+  );
+  res.json(result.rows);
+});
+
 router.post("/manga", requireAuth, requireRole("uploader", "admin"), coverUpload.single("cover"), async (req, res) => {
   const { title, description } = req.body;
   if (!title) return res.status(400).json({ error: "Title is required" });
@@ -36,7 +46,12 @@ router.post("/manga", requireAuth, requireRole("uploader", "admin"), coverUpload
 
 router.get("/manga/:mangaId", requireAuth, async (req, res) => {
   const { mangaId } = req.params;
-  const mangaResult = await pool.query("SELECT * FROM manga WHERE id = $1", [mangaId]);
+  const mangaResult = await pool.query(
+    `SELECT m.*, u.username AS uploader_username FROM manga m
+     JOIN users u ON u.id = m.uploader_id
+     WHERE m.id = $1`,
+    [mangaId]
+  );
   const manga = mangaResult.rows[0];
   if (!manga) return res.status(404).json({ error: "Manga not found" });
 

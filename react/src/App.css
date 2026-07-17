@@ -394,6 +394,35 @@
   object-fit: cover;
 }
 
+.manga-hero-cover-button {
+  position: relative;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  display: block;
+}
+
+.manga-hero-cover-expand {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0);
+  color: transparent;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.manga-hero-cover-button:hover .manga-hero-cover-expand,
+.manga-hero-cover-button:focus-visible .manga-hero-cover-expand {
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+}
+
+.manga-hero-cover-expand .material-symbols-outlined {
+  font-size: 36px;
+}
+
 .manga-hero-actions {
   display: flex;
   gap: 10px;
@@ -414,6 +443,17 @@
 .manga-hero-info h1 {
   max-width: 100%;
   overflow-wrap: break-word;
+}
+
+.manga-uploader-credit {
+  margin-top: -8px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.manga-uploader-credit span {
+  color: var(--text-h);
+  font-weight: 600;
 }
 
 .manga-description {

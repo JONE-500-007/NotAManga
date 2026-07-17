@@ -14,6 +14,7 @@ export default function MangaDetailPage() {
   const [manga, setManga] = useState(null);
   const [chapters, setChapters] = useState([]);
   const [activeTab, setActiveTab] = useState("chapters");
+  const [coverLightboxOpen, setCoverLightboxOpen] = useState(false);
 
   useEffect(() => {
     setManga(null);
@@ -22,6 +23,15 @@ export default function MangaDetailPage() {
       setChapters(data.chapters);
     });
   }, [mangaId]);
+
+  useEffect(() => {
+    if (!coverLightboxOpen) return;
+    const handleKey = (e) => {
+      if (e.key === "Escape") setCoverLightboxOpen(false);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [coverLightboxOpen]);
 
   const isOwner = user?.id === manga?.uploader_id || user?.role === "admin";
 
@@ -117,15 +127,28 @@ export default function MangaDetailPage() {
   return (
     <div className="page manga-detail-page">
       <div className="manga-hero">
-        <div className="manga-hero-cover">
-          {manga.cover_path ? (
+        {manga.cover_path ? (
+          <button
+            type="button"
+            className="manga-hero-cover manga-hero-cover-button"
+            onClick={() => setCoverLightboxOpen(true)}
+            aria-label={t("detail.viewFullCover")}
+          >
             <img src={manga.cover_path} alt={manga.title} />
-          ) : (
+            <span className="manga-hero-cover-expand">
+              <span className="material-symbols-outlined">fullscreen</span>
+            </span>
+          </button>
+        ) : (
+          <div className="manga-hero-cover">
             <div className="manga-card-placeholder" />
-          )}
-        </div>
+          </div>
+        )}
         <div className="manga-hero-info">
           <h1 dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(manga.title) }} />
+          <p className="manga-uploader-credit">
+            {t("detail.by")} <span>{manga.uploader_username}</span>
+          </p>
           {manga.description && (
             <div
               className="manga-description"
@@ -133,7 +156,7 @@ export default function MangaDetailPage() {
             />
           )}
           <div className="manga-hero-actions">
-            {(user?.role === "uploader" || user?.role === "admin") && (
+            {isOwner && (
               <Link to={`/manga/${manga.id}/upload-chapter`} className="btn btn-accent">
                 {t("detail.uploadChapter")}
               </Link>
@@ -175,6 +198,19 @@ export default function MangaDetailPage() {
         </>
       ) : (
         <ArtGallery mangaId={manga.id} isOwner={isOwner} />
+      )}
+
+      {coverLightboxOpen && manga.cover_path && (
+        <div className="lightbox-overlay" onClick={() => setCoverLightboxOpen(false)}>
+          <button
+            className="lightbox-close"
+            onClick={() => setCoverLightboxOpen(false)}
+            aria-label={t("common.close")}
+          >
+            <span className="material-symbols-outlined">close</span>
+          </button>
+          <img src={manga.cover_path} alt={manga.title} onClick={(e) => e.stopPropagation()} />
+        </div>
       )}
     </div>
   );

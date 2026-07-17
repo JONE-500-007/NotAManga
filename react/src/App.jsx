@@ -14,6 +14,7 @@ import UploadChapterPage from "./pages/UploadChapterPage";
 import EditMangaPage from "./pages/EditMangaPage";
 import EditChapterPage from "./pages/EditChapterPage";
 import AdminCategoriesPage from "./pages/AdminCategoriesPage";
+import MyUploadsPage from "./pages/MyUploadsPage";
 import "./App.css";
 
 function Layout() {
@@ -47,6 +48,7 @@ function App() {
                   <Route path="/manga/:mangaId/upload-chapter" element={<UploadChapterPage />} />
                   <Route path="/manga/:mangaId/edit" element={<EditMangaPage />} />
                   <Route path="/manga/:mangaId/chapter/:chapterId/edit" element={<EditChapterPage />} />
+                  <Route path="/my-uploads" element={<MyUploadsPage />} />
                 </Route>
 
                 <Route element={<AdminRoute />}>

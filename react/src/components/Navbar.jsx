@@ -46,6 +46,11 @@ export default function Navbar() {
                   {t("nav.uploadManga")}
                 </Link>
               )}
+              {(user.role === "uploader" || user.role === "admin") && (
+                <Link to="/my-uploads" className="btn btn-ghost">
+                  {t("nav.myUploads")}
+                </Link>
+              )}
               {user.role === "admin" && (
                 <Link to="/admin/categories" className="btn btn-ghost">
                   {t("nav.admin")}
@@ -92,6 +97,11 @@ export default function Navbar() {
             {(user.role === "uploader" || user.role === "admin") && (
               <Link to="/upload/manga" className="btn btn-accent" onClick={closeMenu}>
                 {t("nav.uploadManga")}
+              </Link>
+            )}
+            {(user.role === "uploader" || user.role === "admin") && (
+              <Link to="/my-uploads" className="btn btn-ghost" onClick={closeMenu}>
+                {t("nav.myUploads")}
               </Link>
             )}
             {user.role === "admin" && (

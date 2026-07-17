@@ -2,6 +2,7 @@ export default {
   "nav.browse": "หน้าแรก",
   "nav.uploadManga": "+ อัปโหลดการ์ตูน",
   "nav.admin": "จัดการระบบ",
+  "nav.myUploads": "ผลงานของฉัน",
   "nav.menu": "เมนู",
   "nav.logout": "ออกจากระบบ",
   "nav.login": "เข้าสู่ระบบ",
@@ -27,6 +28,10 @@ export default {
   "detail.chapters": "รายการตอน",
   "detail.noChapters": "ยังไม่มีตอน",
   "detail.by": "อัปโหลดโดย",
+  "detail.viewFullCover": "ดูรูปปกขนาดเต็ม",
+
+  "myUploads.title": "ผลงานของฉัน",
+  "myUploads.empty": "คุณยังไม่ได้อัปโหลดการ์ตูนเรื่องไหนเลย",
   "detail.edit": "แก้ไข",
   "detail.editChapter": "แก้ไข",
   "detail.deleteChapter": "ลบ",

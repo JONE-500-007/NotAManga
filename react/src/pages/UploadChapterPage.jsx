@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
+import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import UploadProgressBar from "../components/UploadProgressBar";
 import StagedFileList from "../components/StagedFileList";
@@ -8,7 +9,9 @@ import StagedFileList from "../components/StagedFileList";
 export default function UploadChapterPage() {
   const { mangaId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { t } = useLanguage();
+  const [manga, setManga] = useState(null);
   const [chapterNumber, setChapterNumber] = useState("");
   const [volume, setVolume] = useState("");
   const [title, setTitle] = useState("");
@@ -16,6 +19,16 @@ export default function UploadChapterPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  useEffect(() => {
+    api.get(`/manga/${mangaId}`).then(setManga);
+  }, [mangaId]);
+
+  if (manga && manga.uploader_id !== user.id && user.role !== "admin") {
+    return <Navigate to={`/manga/${mangaId}`} replace />;
+  }
+
+  if (!manga) return <div className="page-loading">{t("common.loading")}</div>;
 
   const handleRemovePage = (index) => {
     setPages((current) => current.filter((_, i) => i !== index));

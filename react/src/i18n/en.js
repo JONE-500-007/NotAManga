@@ -2,6 +2,7 @@ export default {
   "nav.browse": "Browse",
   "nav.uploadManga": "+ Upload Manga",
   "nav.admin": "Admin",
+  "nav.myUploads": "My Uploads",
   "nav.menu": "Menu",
   "nav.logout": "Logout",
   "nav.login": "Login",
@@ -27,6 +28,10 @@ export default {
   "detail.chapters": "Chapters",
   "detail.noChapters": "No chapters yet.",
   "detail.by": "Uploaded by",
+  "detail.viewFullCover": "View full cover image",
+
+  "myUploads.title": "My Uploads",
+  "myUploads.empty": "You haven't uploaded any manga yet.",
   "detail.edit": "Edit",
   "detail.editChapter": "Edit",
   "detail.deleteChapter": "Delete",
