@@ -1,6 +1,8 @@
 export default {
   "nav.browse": "หน้าแรก",
   "nav.uploadManga": "+ อัปโหลดการ์ตูน",
+  "nav.admin": "จัดการระบบ",
+  "nav.menu": "เมนู",
   "nav.logout": "ออกจากระบบ",
   "nav.login": "เข้าสู่ระบบ",
 
@@ -12,9 +14,14 @@ export default {
 
   "role.member": "สมาชิก",
   "role.uploader": "ผู้อัปโหลด",
+  "role.admin": "แอดมิน",
 
   "browse.title": "เรื่องทั้งหมด",
   "browse.empty": "ยังไม่มีการ์ตูน",
+  "browse.allManga": "การ์ตูนทั้งหมด",
+  "browse.searchPlaceholder": "ค้นหาการ์ตูนจากชื่อเรื่อง...",
+  "browse.searchResults": "ผลการค้นหา",
+  "browse.searchEmpty": "ไม่พบการ์ตูนที่ตรงกับคำค้นหา",
 
   "detail.uploadChapter": "+ อัปโหลดตอนใหม่",
   "detail.chapters": "รายการตอน",
@@ -73,6 +80,7 @@ export default {
   "editChapter.pages": "หน้าในตอนนี้",
   "editChapter.reorderHint": "ลากรูป หรือใช้ปุ่มลูกศรเพื่อจัดลำดับ",
   "editChapter.addPages": "เพิ่มหน้าใหม่",
+  "editChapter.uploadPages": "อัปโหลดหน้าใหม่",
   "editChapter.deletePage": "ลบหน้านี้",
   "editChapter.deleteChapter": "ลบตอนนี้",
 
@@ -95,9 +103,30 @@ export default {
   "common.moveUp": "เลื่อนขึ้น",
   "common.moveDown": "เลื่อนลง",
   "common.delete": "ลบ",
+  "common.remove": "นำออก",
   "common.cancel": "ยกเลิก",
   "common.close": "ปิด",
   "common.reset": "รีเซ็ต",
   "common.on": "เปิด",
   "common.off": "ปิด",
+  "common.uploading": "กำลังอัปโหลด",
+
+  "admin.categories.title": "จัดการหมวดหมู่",
+  "admin.categories.addTitle": "เพิ่มหมวดหมู่",
+  "admin.categories.titleLabel": "ชื่อหมวดหมู่",
+  "admin.categories.descriptionLabel": "คำอธิบาย",
+  "admin.categories.submit": "สร้างหมวดหมู่",
+  "admin.categories.edit": "แก้ไข",
+  "admin.categories.save": "บันทึก",
+  "admin.categories.delete": "ลบ",
+  "admin.categories.deleteConfirm": "ลบหมวดหมู่นี้? การ์ตูนข้างในจะไม่ถูกลบ แค่จะหลุดออกจากหมวดนี้",
+  "admin.categories.reorderHint": "ลากหมวดหมู่ หรือใช้ปุ่มลูกศรเพื่อจัดลำดับ",
+  "admin.categories.mangaReorderHint": "ลากการ์ตูน หรือใช้ปุ่มลูกศรเพื่อจัดลำดับ",
+  "admin.categories.addManga": "เพิ่มการ์ตูน",
+  "admin.categories.selectManga": "เลือกการ์ตูน...",
+  "admin.categories.searchManga": "ค้นหาการ์ตูน...",
+  "admin.categories.noMangaFound": "ไม่พบการ์ตูนที่ค้นหา",
+  "admin.categories.removeManga": "นำออก",
+  "admin.categories.empty": "ยังไม่มีหมวดหมู่",
+  "admin.categories.emptyManga": "ยังไม่มีการ์ตูนในหมวดนี้",
 };

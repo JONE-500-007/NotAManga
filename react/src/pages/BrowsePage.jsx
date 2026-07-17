@@ -1,29 +1,86 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { useLanguage } from "../context/LanguageContext";
+import { renderInlineMarkdown, renderMarkdown } from "../utils/renderMarkdown";
 import MangaCard from "../components/MangaCard";
 
 export default function BrowsePage() {
   const { t } = useLanguage();
   const [manga, setManga] = useState(null);
+  const [categories, setCategories] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     api.get("/manga").then(setManga).catch(() => setManga([]));
+    api.get("/categories").then(setCategories).catch(() => setCategories([]));
   }, []);
 
-  if (manga === null) return <div className="page-loading">{t("common.loading")}</div>;
+  if (manga === null || categories === null) return <div className="page-loading">{t("common.loading")}</div>;
+
+  const shelves = categories.filter((c) => c.manga.length > 0);
+  const trimmedQuery = searchQuery.trim().toLowerCase();
+  const isSearching = trimmedQuery.length > 0;
+  const searchResults = isSearching ? manga.filter((m) => m.title.toLowerCase().includes(trimmedQuery)) : [];
 
   return (
     <div className="page browse-page">
-      <h1>{t("browse.title")}</h1>
-      {manga.length === 0 ? (
-        <p className="empty-state">{t("browse.empty")}</p>
+      <div className="browse-search">
+        <input
+          type="search"
+          className="browse-search-input"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder={t("browse.searchPlaceholder")}
+        />
+      </div>
+
+      {isSearching ? (
+        <section>
+          <h2>{t("browse.searchResults")}</h2>
+          {searchResults.length === 0 ? (
+            <p className="empty-state">{t("browse.searchEmpty")}</p>
+          ) : (
+            <div className="manga-grid">
+              {searchResults.map((m) => (
+                <MangaCard key={m.id} manga={m} />
+              ))}
+            </div>
+          )}
+        </section>
       ) : (
-        <div className="manga-grid">
-          {manga.map((m) => (
-            <MangaCard key={m.id} manga={m} />
+        <>
+          {shelves.map((category) => (
+            <section key={category.id} className="shelf">
+              <div className="shelf-header">
+                <h2 dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(category.title) }} />
+              </div>
+              {category.description && (
+                <div
+                  className="shelf-description"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(category.description) }}
+                />
+              )}
+              <div className="shelf-scroll">
+                {category.manga.map((m) => (
+                  <MangaCard key={m.id} manga={m} />
+                ))}
+              </div>
+            </section>
           ))}
-        </div>
+
+          <section>
+            <h2>{shelves.length > 0 ? t("browse.allManga") : t("browse.title")}</h2>
+            {manga.length === 0 ? (
+              <p className="empty-state">{t("browse.empty")}</p>
+            ) : (
+              <div className="manga-grid">
+                {manga.map((m) => (
+                  <MangaCard key={m.id} manga={m} />
+                ))}
+              </div>
+            )}
+          </section>
+        </>
       )}
     </div>
   );

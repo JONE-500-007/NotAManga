@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { renderInlineMarkdown } from "../utils/renderMarkdown";
 
 export default function MangaCard({ manga }) {
   return (
@@ -10,7 +11,7 @@ export default function MangaCard({ manga }) {
           <div className="manga-card-placeholder" />
         )}
       </div>
-      <div className="manga-card-title">{manga.title}</div>
+      <div className="manga-card-title" dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(manga.title) }} />
     </Link>
   );
 }

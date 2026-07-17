@@ -45,6 +45,25 @@ async function initSchema(pool) {
     );
 
     ALTER TABLE chapters ADD COLUMN IF NOT EXISTS volume NUMERIC;
+
+    ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+    ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('member', 'uploader', 'admin'));
+
+    CREATE TABLE IF NOT EXISTS categories (
+      id SERIAL PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT,
+      position INTEGER NOT NULL UNIQUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS category_manga (
+      category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+      manga_id INTEGER NOT NULL REFERENCES manga(id) ON DELETE CASCADE,
+      position INTEGER NOT NULL,
+      PRIMARY KEY (category_id, manga_id),
+      UNIQUE (category_id, position)
+    );
   `);
 }
 

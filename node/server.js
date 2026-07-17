@@ -5,6 +5,7 @@ const pool = require("./db/pool");
 const { initSchema } = require("./db/schema");
 const authRoutes = require("./routes/auth.routes");
 const mangaRoutes = require("./routes/manga.routes");
+const categoryRoutes = require("./routes/category.routes");
 
 const app = express();
 app.use(express.json());
@@ -18,6 +19,7 @@ app.get("/", async (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api", mangaRoutes);
+app.use("/api", categoryRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err);

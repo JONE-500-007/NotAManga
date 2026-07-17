@@ -1,24 +1,29 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import { useDragReorder } from "../hooks/useDragReorder";
+import UploadProgressBar from "../components/UploadProgressBar";
+import StagedFileList from "../components/StagedFileList";
 
 export default function EditChapterPage() {
   const { mangaId, chapterId } = useParams();
   const { user } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const newPagesInputRef = useRef(null);
 
   const [manga, setManga] = useState(null);
   const [chapterNumber, setChapterNumber] = useState("");
   const [volume, setVolume] = useState("");
   const [title, setTitle] = useState("");
   const [pages, setPages] = useState(null);
+  const [newPageFiles, setNewPageFiles] = useState([]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [addingPages, setAddingPages] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
     api.get(`/manga/${mangaId}`).then(setManga);
@@ -40,7 +45,7 @@ export default function EditChapterPage() {
     onCommit: commitPageOrder,
   });
 
-  if (manga && manga.uploader_id !== user.id) {
+  if (manga && manga.uploader_id !== user.id && user.role !== "admin") {
     return <Navigate to={`/manga/${mangaId}`} replace />;
   }
 
@@ -76,20 +81,34 @@ export default function EditChapterPage() {
     setPages((current) => current.filter((p) => p.id !== pageId));
   };
 
-  const handleAddPages = async (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
+  const handleSelectNewPages = (e) => {
+    setNewPageFiles(Array.from(e.target.files));
+  };
+
+  const handleRemoveNewPage = (index) => {
+    setNewPageFiles((current) => current.filter((_, i) => i !== index));
+  };
+
+  const handleUploadNewPages = async () => {
+    if (newPageFiles.length === 0) return;
+    setError("");
     setAddingPages(true);
+    setUploadProgress(0);
     try {
       const formData = new FormData();
-      files.forEach((file) => formData.append("pages", file));
-      const updatedPages = await api.postForm(`/manga/${mangaId}/chapters/${chapterId}/pages`, formData);
+      newPageFiles.forEach((file) => formData.append("pages", file));
+      const updatedPages = await api.postForm(
+        `/manga/${mangaId}/chapters/${chapterId}/pages`,
+        formData,
+        setUploadProgress
+      );
       setPages(updatedPages);
+      setNewPageFiles([]);
+      if (newPagesInputRef.current) newPagesInputRef.current.value = "";
     } catch (err) {
       setError(err.message);
     } finally {
       setAddingPages(false);
-      e.target.value = "";
     }
   };
 
@@ -186,8 +205,27 @@ export default function EditChapterPage() {
 
         <label className="add-pages-input">
           {t("editChapter.addPages")}
-          <input type="file" accept="image/*" multiple onChange={handleAddPages} disabled={addingPages} />
+          <input
+            ref={newPagesInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleSelectNewPages}
+            disabled={addingPages}
+          />
         </label>
+        <StagedFileList files={newPageFiles} onRemove={handleRemoveNewPage} />
+        {addingPages && <UploadProgressBar percent={uploadProgress} />}
+        {newPageFiles.length > 0 && (
+          <button
+            type="button"
+            className="btn btn-accent btn-sm"
+            onClick={handleUploadNewPages}
+            disabled={addingPages}
+          >
+            {t("editChapter.uploadPages")}
+          </button>
+        )}
       </div>
     </div>
   );

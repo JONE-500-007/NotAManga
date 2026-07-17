@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import { useLanguage } from "../context/LanguageContext";
 import { useDragReorder } from "../hooks/useDragReorder";
+import UploadProgressBar from "./UploadProgressBar";
+import SelectedFilePreview from "./SelectedFilePreview";
 
 export default function ArtGallery({ mangaId, isOwner }) {
   const { t } = useLanguage();
+  const imageInputRef = useRef(null);
   const [art, setArt] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editCaption, setEditCaption] = useState("");
@@ -13,6 +16,12 @@ export default function ArtGallery({ mangaId, isOwner }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [lightboxItem, setLightboxItem] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  const handleRemoveNewFile = () => {
+    setNewFile(null);
+    if (imageInputRef.current) imageInputRef.current.value = "";
+  };
 
   useEffect(() => {
     api.get(`/manga/${mangaId}/art`).then(setArt);
@@ -61,11 +70,12 @@ export default function ArtGallery({ mangaId, isOwner }) {
     if (!newFile) return;
     setError("");
     setSubmitting(true);
+    setUploadProgress(0);
     try {
       const formData = new FormData();
       formData.append("image", newFile);
       formData.append("caption", newCaption);
-      const created = await api.postForm(`/manga/${mangaId}/art`, formData);
+      const created = await api.postForm(`/manga/${mangaId}/art`, formData, setUploadProgress);
       setArt((current) => [...current, created]);
       setNewFile(null);
       setNewCaption("");
@@ -161,8 +171,15 @@ export default function ArtGallery({ mangaId, isOwner }) {
               <span className="art-add-title">{t("art.addTitle")}</span>
               <label>
                 {t("art.image")}
-                <input type="file" accept="image/*" onChange={(e) => setNewFile(e.target.files[0])} required />
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setNewFile(e.target.files[0])}
+                  required
+                />
               </label>
+              <SelectedFilePreview file={newFile} onRemove={handleRemoveNewFile} />
               <label>
                 {t("art.caption")}
                 <textarea
@@ -172,6 +189,7 @@ export default function ArtGallery({ mangaId, isOwner }) {
                 />
               </label>
               {error && <p className="form-error">{error}</p>}
+              {submitting && <UploadProgressBar percent={uploadProgress} />}
               <button type="submit" className="btn btn-accent" disabled={submitting}>
                 {t("art.submit")}
               </button>

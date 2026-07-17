@@ -1,14 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
+import UploadProgressBar from "../components/UploadProgressBar";
+import MarkdownEditor from "../components/MarkdownEditor";
+import SelectedFilePreview from "../components/SelectedFilePreview";
 
 export default function EditMangaPage() {
   const { mangaId } = useParams();
   const { user } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const coverInputRef = useRef(null);
 
   const [manga, setManga] = useState(null);
   const [title, setTitle] = useState("");
@@ -16,6 +20,12 @@ export default function EditMangaPage() {
   const [cover, setCover] = useState(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  const handleRemoveCover = () => {
+    setCover(null);
+    if (coverInputRef.current) coverInputRef.current.value = "";
+  };
 
   useEffect(() => {
     api.get(`/manga/${mangaId}`).then((data) => {
@@ -25,7 +35,7 @@ export default function EditMangaPage() {
     });
   }, [mangaId]);
 
-  if (manga && manga.uploader_id !== user.id) {
+  if (manga && manga.uploader_id !== user.id && user.role !== "admin") {
     return <Navigate to={`/manga/${mangaId}`} replace />;
   }
 
@@ -35,12 +45,13 @@ export default function EditMangaPage() {
     e.preventDefault();
     setError("");
     setSubmitting(true);
+    setUploadProgress(0);
     try {
       const formData = new FormData();
       formData.append("title", title);
       formData.append("description", description);
       if (cover) formData.append("cover", cover);
-      await api.patchForm(`/manga/${mangaId}`, formData);
+      await api.patchForm(`/manga/${mangaId}`, formData, setUploadProgress);
       navigate(`/manga/${mangaId}`);
     } catch (err) {
       setError(err.message);
@@ -62,12 +73,20 @@ export default function EditMangaPage() {
 
         <label>
           {t("uploadManga.titleLabel")}
-          <input value={title} onChange={(e) => setTitle(e.target.value)} required />
+          <MarkdownEditor
+            className="manga-title-input"
+            value={title}
+            onChange={setTitle}
+            multiline={false}
+            headings={false}
+            lists={false}
+            required
+          />
         </label>
 
         <label>
           {t("uploadManga.description")}
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} />
+          <MarkdownEditor value={description} onChange={setDescription} />
         </label>
 
         {manga.cover_path && (
@@ -79,10 +98,12 @@ export default function EditMangaPage() {
 
         <label>
           {t("uploadManga.cover")}
-          <input type="file" accept="image/*" onChange={(e) => setCover(e.target.files[0])} />
+          <input ref={coverInputRef} type="file" accept="image/*" onChange={(e) => setCover(e.target.files[0])} />
         </label>
+        <SelectedFilePreview file={cover} onRemove={handleRemoveCover} />
 
         {error && <p className="form-error">{error}</p>}
+        {submitting && <UploadProgressBar percent={uploadProgress} />}
 
         <button type="submit" className="btn btn-accent" disabled={submitting}>
           {t("editManga.submit")}

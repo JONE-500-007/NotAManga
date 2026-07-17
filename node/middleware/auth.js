@@ -16,9 +16,9 @@ function requireAuth(req, res, next) {
   }
 }
 
-function requireRole(role) {
+function requireRole(...roles) {
   return (req, res, next) => {
-    if (req.user?.role !== role) {
+    if (!roles.includes(req.user?.role)) {
       return res.status(403).json({ error: "Forbidden" });
     }
     next();
@@ -30,7 +30,9 @@ async function requireMangaOwner(req, res, next) {
   const result = await pool.query("SELECT uploader_id FROM manga WHERE id = $1", [mangaId]);
   const manga = result.rows[0];
   if (!manga) return res.status(404).json({ error: "Manga not found" });
-  if (manga.uploader_id !== req.user.id) return res.status(403).json({ error: "Forbidden" });
+  if (req.user.role !== "admin" && manga.uploader_id !== req.user.id) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
   next();
 }
 

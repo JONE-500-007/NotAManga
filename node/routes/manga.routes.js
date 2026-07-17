@@ -22,7 +22,7 @@ router.get("/manga", requireAuth, async (req, res) => {
   res.json(result.rows);
 });
 
-router.post("/manga", requireAuth, requireRole("uploader"), coverUpload.single("cover"), async (req, res) => {
+router.post("/manga", requireAuth, requireRole("uploader", "admin"), coverUpload.single("cover"), async (req, res) => {
   const { title, description } = req.body;
   if (!title) return res.status(400).json({ error: "Title is required" });
 
@@ -50,7 +50,7 @@ router.get("/manga/:mangaId", requireAuth, async (req, res) => {
 router.patch(
   "/manga/:mangaId",
   requireAuth,
-  requireRole("uploader"),
+  requireRole("uploader", "admin"),
   requireMangaOwner,
   coverUpload.single("cover"),
   async (req, res) => {
@@ -72,7 +72,7 @@ router.patch(
   }
 );
 
-router.delete("/manga/:mangaId", requireAuth, requireRole("uploader"), requireMangaOwner, async (req, res) => {
+router.delete("/manga/:mangaId", requireAuth, requireRole("uploader", "admin"), requireMangaOwner, async (req, res) => {
   const { mangaId } = req.params;
 
   const mangaResult = await pool.query("SELECT cover_path FROM manga WHERE id = $1", [mangaId]);
@@ -92,7 +92,7 @@ router.delete("/manga/:mangaId", requireAuth, requireRole("uploader"), requireMa
 router.post(
   "/manga/:mangaId/chapters",
   requireAuth,
-  requireRole("uploader"),
+  requireRole("uploader", "admin"),
   requireMangaOwner,
   chapterPagesUpload.array("pages"),
   async (req, res) => {
@@ -140,7 +140,7 @@ router.post(
 router.patch(
   "/manga/:mangaId/chapters/reorder",
   requireAuth,
-  requireRole("uploader"),
+  requireRole("uploader", "admin"),
   requireMangaOwner,
   async (req, res) => {
     const { mangaId } = req.params;
@@ -173,7 +173,7 @@ router.patch(
 router.patch(
   "/manga/:mangaId/chapters/:chapterId",
   requireAuth,
-  requireRole("uploader"),
+  requireRole("uploader", "admin"),
   requireMangaOwner,
   async (req, res) => {
     const { mangaId, chapterId } = req.params;
@@ -192,7 +192,7 @@ router.patch(
 router.delete(
   "/manga/:mangaId/chapters/:chapterId",
   requireAuth,
-  requireRole("uploader"),
+  requireRole("uploader", "admin"),
   requireMangaOwner,
   async (req, res) => {
     const { mangaId, chapterId } = req.params;
@@ -238,7 +238,7 @@ router.get("/manga/:mangaId/chapters/:chapterId", requireAuth, async (req, res) 
 router.post(
   "/manga/:mangaId/chapters/:chapterId/pages",
   requireAuth,
-  requireRole("uploader"),
+  requireRole("uploader", "admin"),
   requireMangaOwner,
   chapterPagesUpload.array("pages"),
   async (req, res) => {
@@ -280,7 +280,7 @@ router.post(
 router.patch(
   "/manga/:mangaId/chapters/:chapterId/pages/reorder",
   requireAuth,
-  requireRole("uploader"),
+  requireRole("uploader", "admin"),
   requireMangaOwner,
   async (req, res) => {
     const { chapterId } = req.params;
@@ -313,7 +313,7 @@ router.patch(
 router.delete(
   "/manga/:mangaId/chapters/:chapterId/pages/:pageId",
   requireAuth,
-  requireRole("uploader"),
+  requireRole("uploader", "admin"),
   requireMangaOwner,
   async (req, res) => {
     const { chapterId, pageId } = req.params;
@@ -347,7 +347,7 @@ router.get("/manga/:mangaId/art", requireAuth, async (req, res) => {
 router.post(
   "/manga/:mangaId/art",
   requireAuth,
-  requireRole("uploader"),
+  requireRole("uploader", "admin"),
   requireMangaOwner,
   artUpload.single("image"),
   async (req, res) => {
@@ -373,7 +373,7 @@ router.post(
 router.patch(
   "/manga/:mangaId/art/reorder",
   requireAuth,
-  requireRole("uploader"),
+  requireRole("uploader", "admin"),
   requireMangaOwner,
   async (req, res) => {
     const { mangaId } = req.params;
@@ -406,7 +406,7 @@ router.patch(
 router.patch(
   "/manga/:mangaId/art/:artId",
   requireAuth,
-  requireRole("uploader"),
+  requireRole("uploader", "admin"),
   requireMangaOwner,
   async (req, res) => {
     const { mangaId, artId } = req.params;
@@ -424,7 +424,7 @@ router.patch(
 router.delete(
   "/manga/:mangaId/art/:artId",
   requireAuth,
-  requireRole("uploader"),
+  requireRole("uploader", "admin"),
   requireMangaOwner,
   async (req, res) => {
     const { mangaId, artId } = req.params;

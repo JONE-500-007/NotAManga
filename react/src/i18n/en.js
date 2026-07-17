@@ -1,6 +1,8 @@
 export default {
   "nav.browse": "Browse",
   "nav.uploadManga": "+ Upload Manga",
+  "nav.admin": "Admin",
+  "nav.menu": "Menu",
   "nav.logout": "Logout",
   "nav.login": "Login",
 
@@ -12,9 +14,14 @@ export default {
 
   "role.member": "Member",
   "role.uploader": "Uploader",
+  "role.admin": "Admin",
 
   "browse.title": "Browse",
   "browse.empty": "No manga yet.",
+  "browse.allManga": "All Manga",
+  "browse.searchPlaceholder": "Search manga by title...",
+  "browse.searchResults": "Search results",
+  "browse.searchEmpty": "No manga matched your search.",
 
   "detail.uploadChapter": "+ Upload Chapter",
   "detail.chapters": "Chapters",
@@ -73,6 +80,7 @@ export default {
   "editChapter.pages": "Pages",
   "editChapter.reorderHint": "Drag pages or use the arrows to reorder",
   "editChapter.addPages": "Add pages",
+  "editChapter.uploadPages": "Upload pages",
   "editChapter.deletePage": "Delete page",
   "editChapter.deleteChapter": "Delete chapter",
 
@@ -95,9 +103,30 @@ export default {
   "common.moveUp": "Move up",
   "common.moveDown": "Move down",
   "common.delete": "Delete",
+  "common.remove": "Remove",
   "common.cancel": "Cancel",
   "common.close": "Close",
   "common.reset": "Reset",
   "common.on": "On",
   "common.off": "Off",
+  "common.uploading": "Uploading",
+
+  "admin.categories.title": "Manage Categories",
+  "admin.categories.addTitle": "Add category",
+  "admin.categories.titleLabel": "Title",
+  "admin.categories.descriptionLabel": "Description",
+  "admin.categories.submit": "Create category",
+  "admin.categories.edit": "Edit",
+  "admin.categories.save": "Save",
+  "admin.categories.delete": "Delete",
+  "admin.categories.deleteConfirm": "Delete this category? The manga inside it won't be deleted, just removed from this category.",
+  "admin.categories.reorderHint": "Drag categories or use the arrows to reorder",
+  "admin.categories.mangaReorderHint": "Drag manga or use the arrows to reorder",
+  "admin.categories.addManga": "Add manga",
+  "admin.categories.selectManga": "Select manga...",
+  "admin.categories.searchManga": "Search manga...",
+  "admin.categories.noMangaFound": "No manga found.",
+  "admin.categories.removeManga": "Remove",
+  "admin.categories.empty": "No categories yet.",
+  "admin.categories.emptyManga": "No manga in this category yet.",
 };

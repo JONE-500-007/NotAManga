@@ -4,6 +4,7 @@ import { LanguageProvider } from "./context/LanguageContext";
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import UploaderRoute from "./components/UploaderRoute";
+import AdminRoute from "./components/AdminRoute";
 import LoginPage from "./pages/LoginPage";
 import BrowsePage from "./pages/BrowsePage";
 import MangaDetailPage from "./pages/MangaDetailPage";
@@ -12,6 +13,7 @@ import UploadMangaPage from "./pages/UploadMangaPage";
 import UploadChapterPage from "./pages/UploadChapterPage";
 import EditMangaPage from "./pages/EditMangaPage";
 import EditChapterPage from "./pages/EditChapterPage";
+import AdminCategoriesPage from "./pages/AdminCategoriesPage";
 import "./App.css";
 
 function Layout() {
@@ -45,6 +47,10 @@ function App() {
                   <Route path="/manga/:mangaId/upload-chapter" element={<UploadChapterPage />} />
                   <Route path="/manga/:mangaId/edit" element={<EditMangaPage />} />
                   <Route path="/manga/:mangaId/chapter/:chapterId/edit" element={<EditChapterPage />} />
+                </Route>
+
+                <Route element={<AdminRoute />}>
+                  <Route path="/admin/categories" element={<AdminCategoriesPage />} />
                 </Route>
               </Route>
             </Route>

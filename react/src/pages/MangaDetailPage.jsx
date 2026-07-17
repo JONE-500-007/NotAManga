@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import { useDragReorder } from "../hooks/useDragReorder";
+import { renderInlineMarkdown, renderMarkdown } from "../utils/renderMarkdown";
 import ArtGallery from "../components/ArtGallery";
 
 export default function MangaDetailPage() {
@@ -22,7 +23,7 @@ export default function MangaDetailPage() {
     });
   }, [mangaId]);
 
-  const isOwner = user?.id === manga?.uploader_id;
+  const isOwner = user?.id === manga?.uploader_id || user?.role === "admin";
 
   const commitChapterOrder = async (orderedChapterIds) => {
     await api.patch(`/manga/${mangaId}/chapters/reorder`, { orderedChapterIds });
@@ -124,10 +125,15 @@ export default function MangaDetailPage() {
           )}
         </div>
         <div className="manga-hero-info">
-          <h1>{manga.title}</h1>
-          {manga.description && <p className="manga-description">{manga.description}</p>}
+          <h1 dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(manga.title) }} />
+          {manga.description && (
+            <div
+              className="manga-description"
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(manga.description) }}
+            />
+          )}
           <div className="manga-hero-actions">
-            {user?.role === "uploader" && (
+            {(user?.role === "uploader" || user?.role === "admin") && (
               <Link to={`/manga/${manga.id}/upload-chapter`} className="btn btn-accent">
                 {t("detail.uploadChapter")}
               </Link>
