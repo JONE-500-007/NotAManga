@@ -92,6 +92,9 @@ export default function MarkdownEditor({
         <button type="button" onClick={wrap("~~", "~~", "strikethrough")} style={{ textDecoration: "line-through" }}>
           S
         </button>
+        <button type="button" onClick={wrap("<u>", "</u>", "underlined text")} style={{ textDecoration: "underline" }}>
+          U
+        </button>
         {headings && <button type="button" onClick={wrap("`", "`", "code")}>{"</>"}</button>}
         {lists && (
           <>
