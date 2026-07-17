@@ -21,6 +21,16 @@ export default function EditMangaPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const handleKey = (e) => {
+      if (e.key === "Escape") setLightboxOpen(false);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [lightboxOpen]);
 
   const handleRemoveCover = () => {
     setCover(null);
@@ -92,7 +102,12 @@ export default function EditMangaPage() {
         {manga.cover_path && (
           <div>
             <span className="settings-label">{t("editManga.currentCover")}</span>
-            <img src={manga.cover_path} alt={manga.title} className="edit-current-cover" />
+            <img
+              src={manga.cover_path}
+              alt={manga.title}
+              className="edit-current-cover"
+              onClick={() => setLightboxOpen(true)}
+            />
           </div>
         )}
 
@@ -116,6 +131,19 @@ export default function EditMangaPage() {
           </button>
         </div>
       </form>
+
+      {lightboxOpen && (
+        <div className="lightbox-overlay" onClick={() => setLightboxOpen(false)}>
+          <button
+            className="lightbox-close"
+            onClick={() => setLightboxOpen(false)}
+            aria-label={t("common.close")}
+          >
+            &times;
+          </button>
+          <img src={manga.cover_path} alt={manga.title} onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
     </div>
   );
 }

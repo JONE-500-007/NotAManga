@@ -24,6 +24,16 @@ export default function EditChapterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [addingPages, setAddingPages] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [lightboxPage, setLightboxPage] = useState(null);
+
+  useEffect(() => {
+    if (!lightboxPage) return;
+    const handleKey = (e) => {
+      if (e.key === "Escape") setLightboxPage(null);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [lightboxPage]);
 
   useEffect(() => {
     api.get(`/manga/${mangaId}`).then(setManga);
@@ -182,7 +192,12 @@ export default function EditChapterPage() {
                 drag_indicator
               </span>
               <span className="page-thumb-index">{index + 1}</span>
-              <img src={page.image_path} alt={`Page ${index + 1}`} draggable={false} />
+              <img
+                src={page.image_path}
+                alt={`Page ${index + 1}`}
+                draggable={false}
+                onClick={() => setLightboxPage(page)}
+              />
               <div className="page-thumb-controls">
                 <button
                   type="button"
@@ -237,6 +252,23 @@ export default function EditChapterPage() {
           </button>
         )}
       </div>
+
+      {lightboxPage && (
+        <div className="lightbox-overlay" onClick={() => setLightboxPage(null)}>
+          <button
+            className="lightbox-close"
+            onClick={() => setLightboxPage(null)}
+            aria-label={t("common.close")}
+          >
+            &times;
+          </button>
+          <img
+            src={lightboxPage.image_path}
+            alt={`Page ${pages.findIndex((p) => p.id === lightboxPage.id) + 1}`}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
