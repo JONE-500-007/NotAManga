@@ -39,11 +39,12 @@ export default function EditChapterPage() {
     await api.patch(`/manga/${mangaId}/chapters/${chapterId}/pages/reorder`, { orderedPageIds });
   };
 
-  const { draggingId, handleDragStart, handleDragOver, handleDrop, moveByOffset } = useDragReorder({
-    items: pages || [],
-    setItems: setPages,
-    onCommit: commitPageOrder,
-  });
+  const { draggingId, dragArmed, armDrag, disarmDrag, handleDragStart, handleDragOver, handleDrop, moveByOffset } =
+    useDragReorder({
+      items: pages || [],
+      setItems: setPages,
+      onCommit: commitPageOrder,
+    });
 
   if (manga && manga.uploader_id !== user.id && user.role !== "admin") {
     return <Navigate to={`/manga/${mangaId}`} replace />;
@@ -166,13 +167,22 @@ export default function EditChapterPage() {
             <div
               key={page.id}
               className={`page-thumb${draggingId === page.id ? " page-thumb-dragging" : ""}`}
-              draggable
+              draggable={dragArmed}
               onDragStart={handleDragStart(page.id)}
               onDragOver={handleDragOver(page.id)}
               onDrop={handleDrop}
+              onDragEnd={disarmDrag}
             >
+              <span
+                className="drag-handle material-symbols-outlined"
+                onMouseDown={armDrag}
+                onMouseUp={disarmDrag}
+                aria-hidden="true"
+              >
+                drag_indicator
+              </span>
               <span className="page-thumb-index">{index + 1}</span>
-              <img src={page.image_path} alt={`Page ${index + 1}`} />
+              <img src={page.image_path} alt={`Page ${index + 1}`} draggable={false} />
               <div className="page-thumb-controls">
                 <button
                   type="button"

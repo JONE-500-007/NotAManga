@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { renderInlineMarkdown, renderMarkdown } from "../utils/renderMarkdown";
 
 function wrapSelection(field, before, after, placeholder) {
@@ -42,6 +42,7 @@ export default function MarkdownEditor({
   ...fieldProps
 }) {
   const fieldRef = useRef(null);
+  const colorInputRef = useRef(null);
 
   const apply = (transform) => {
     const field = fieldRef.current;
@@ -56,10 +57,21 @@ export default function MarkdownEditor({
 
   const wrap = (before, after, placeholder) => () => apply((field) => wrapSelection(field, before, after, placeholder));
 
-  const handleColor = (e) => {
-    const color = e.target.value;
-    apply((field) => wrapSelection(field, `<span style="color:${color}">`, "</span>", "colored text"));
-  };
+  // The native color picker fires "input" continuously while dragging inside
+  // it (and React's onChange prop is actually wired to that "input" event,
+  // not "change"), so wiring the wrap-in-<span> through onChange applied it
+  // on every drag tick, nesting the selection in a new span each time. The
+  // real native "change" event only fires once, when a color is committed.
+  useEffect(() => {
+    const colorInput = colorInputRef.current;
+    if (!colorInput) return;
+    const handleColorChange = (e) => {
+      const color = e.target.value;
+      apply((field) => wrapSelection(field, `<span style="color:${color}">`, "</span>", "colored text"));
+    };
+    colorInput.addEventListener("change", handleColorChange);
+    return () => colorInput.removeEventListener("change", handleColorChange);
+  }, [onChange]);
 
   const Field = multiline ? "textarea" : "input";
   const previewHtml = useMemo(
@@ -107,7 +119,7 @@ export default function MarkdownEditor({
           </>
         )}
         <label className="markdown-color-swatch" title="Text color">
-          <input type="color" defaultValue="#ff6740" onChange={handleColor} />
+          <input ref={colorInputRef} type="color" defaultValue="#ff6740" />
         </label>
       </div>
       <Field

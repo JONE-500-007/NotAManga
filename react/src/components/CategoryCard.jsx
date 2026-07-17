@@ -14,7 +14,18 @@ function truncateTitle(text, maxLength = 40) {
   return text.length > maxLength ? `${text.slice(0, maxLength)}…` : text;
 }
 
-export default function CategoryCard({ category, allManga, index, total, onMoveUp, onMoveDown, onUpdate, onDelete }) {
+export default function CategoryCard({
+  category,
+  allManga,
+  index,
+  total,
+  onMoveUp,
+  onMoveDown,
+  onUpdate,
+  onDelete,
+  onDragHandleMouseDown,
+  onDragHandleMouseUp,
+}) {
   const { t } = useLanguage();
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(category.title);
@@ -27,7 +38,16 @@ export default function CategoryCard({ category, allManga, index, total, onMoveU
     await api.patch(`/categories/${category.id}/manga/reorder`, { orderedMangaIds });
   };
 
-  const { draggingId, handleDragStart, handleDragOver, handleDrop, moveByOffset } = useDragReorder({
+  const {
+    draggingId,
+    dragArmed: mangaDragArmed,
+    armDrag: armMangaDrag,
+    disarmDrag: disarmMangaDrag,
+    handleDragStart,
+    handleDragOver,
+    handleDrop,
+    moveByOffset,
+  } = useDragReorder({
     items: manga,
     setItems: setManga,
     onCommit: commitMangaOrder,
@@ -75,6 +95,14 @@ export default function CategoryCard({ category, allManga, index, total, onMoveU
   return (
     <div className="category-card">
       <div className="category-card-header">
+        <span
+          className="drag-handle material-symbols-outlined"
+          onMouseDown={onDragHandleMouseDown}
+          onMouseUp={onDragHandleMouseUp}
+          aria-hidden="true"
+        >
+          drag_indicator
+        </span>
         {editing ? (
           <MarkdownEditor
             className="category-title-input"
@@ -143,11 +171,20 @@ export default function CategoryCard({ category, allManga, index, total, onMoveU
             <div
               key={m.id}
               className={`category-manga-tile${draggingId === m.id ? " category-manga-tile-dragging" : ""}`}
-              draggable
+              draggable={mangaDragArmed}
               onDragStart={handleDragStart(m.id)}
               onDragOver={handleDragOver(m.id)}
               onDrop={handleDrop}
+              onDragEnd={disarmMangaDrag}
             >
+              <span
+                className="drag-handle material-symbols-outlined"
+                onMouseDown={armMangaDrag}
+                onMouseUp={disarmMangaDrag}
+                aria-hidden="true"
+              >
+                drag_indicator
+              </span>
               <MangaCard manga={m} />
               <div className="category-manga-tile-controls">
                 <button

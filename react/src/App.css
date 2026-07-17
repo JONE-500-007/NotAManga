@@ -556,6 +556,22 @@
   flex-shrink: 0;
 }
 
+/* Drag handle: only this element arms draggable="true" on its card/tile
+   (see useDragReorder's dragArmed), so dragging elsewhere on the card is a
+   normal text-selection/click gesture instead of a reorder drag. */
+.drag-handle {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+  color: var(--accent);
+}
+
 .icon-btn {
   background: var(--surface-alt);
   border: 1px solid var(--border);

@@ -23,11 +23,12 @@ export default function AdminCategoriesPage() {
     await api.patch("/categories/reorder", { orderedCategoryIds });
   };
 
-  const { draggingId, handleDragStart, handleDragOver, handleDrop, moveByOffset } = useDragReorder({
-    items: categories || [],
-    setItems: setCategories,
-    onCommit: commitCategoryOrder,
-  });
+  const { draggingId, dragArmed, armDrag, disarmDrag, handleDragStart, handleDragOver, handleDrop, moveByOffset } =
+    useDragReorder({
+      items: categories || [],
+      setItems: setCategories,
+      onCommit: commitCategoryOrder,
+    });
 
   if (!categories) return <div className="page-loading">{t("common.loading")}</div>;
 
@@ -97,10 +98,11 @@ export default function AdminCategoriesPage() {
               <div
                 key={category.id}
                 className={`category-list-item${draggingId === category.id ? " category-list-item-dragging" : ""}`}
-                draggable
+                draggable={dragArmed}
                 onDragStart={handleDragStart(category.id)}
                 onDragOver={handleDragOver(category.id)}
                 onDrop={handleDrop}
+                onDragEnd={disarmDrag}
               >
                 <CategoryCard
                   category={category}
@@ -111,6 +113,8 @@ export default function AdminCategoriesPage() {
                   onMoveDown={() => moveByOffset(category.id, 1)}
                   onUpdate={handleUpdateCategory}
                   onDelete={handleDeleteCategory}
+                  onDragHandleMouseDown={armDrag}
+                  onDragHandleMouseUp={disarmDrag}
                 />
               </div>
             ))}

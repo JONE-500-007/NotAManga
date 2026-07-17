@@ -47,11 +47,12 @@ export default function MangaDetailPage() {
     );
   };
 
-  const { draggingId, handleDragStart, handleDragOver, handleDrop, moveByOffset } = useDragReorder({
-    items: chapters,
-    setItems: setChapters,
-    onCommit: commitChapterOrder,
-  });
+  const { draggingId, dragArmed, armDrag, disarmDrag, handleDragStart, handleDragOver, handleDrop, moveByOffset } =
+    useDragReorder({
+      items: chapters,
+      setItems: setChapters,
+      onCommit: commitChapterOrder,
+    });
 
   if (!manga) return <div className="page-loading">{t("common.loading")}</div>;
 
@@ -79,11 +80,22 @@ export default function MangaDetailPage() {
       <li
         key={c.id}
         className={draggingId === c.id ? "chapter-row-dragging" : ""}
-        draggable={isOwner}
+        draggable={isOwner && dragArmed}
         onDragStart={isOwner ? handleDragStart(c.id) : undefined}
         onDragOver={isOwner ? handleDragOver(c.id) : undefined}
         onDrop={isOwner ? handleDrop : undefined}
+        onDragEnd={isOwner ? disarmDrag : undefined}
       >
+        {isOwner && (
+          <span
+            className="drag-handle material-symbols-outlined"
+            onMouseDown={armDrag}
+            onMouseUp={disarmDrag}
+            aria-hidden="true"
+          >
+            drag_indicator
+          </span>
+        )}
         <Link to={`/manga/${manga.id}/chapter/${c.id}`} className="chapter-row">
           <span className="chapter-number">Ch. {c.chapter_number}</span>
           {c.title && <span className="chapter-title">{c.title}</span>}

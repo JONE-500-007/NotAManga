@@ -40,11 +40,12 @@ export default function ArtGallery({ mangaId, isOwner }) {
     await api.patch(`/manga/${mangaId}/art/reorder`, { orderedArtIds });
   };
 
-  const { draggingId, handleDragStart, handleDragOver, handleDrop, moveByOffset } = useDragReorder({
-    items: art || [],
-    setItems: setArt,
-    onCommit: commitArtOrder,
-  });
+  const { draggingId, dragArmed, armDrag, disarmDrag, handleDragStart, handleDragOver, handleDrop, moveByOffset } =
+    useDragReorder({
+      items: art || [],
+      setItems: setArt,
+      onCommit: commitArtOrder,
+    });
 
   if (!art) return <div className="page-loading">{t("common.loading")}</div>;
 
@@ -99,16 +100,28 @@ export default function ArtGallery({ mangaId, isOwner }) {
             <div
               key={item.id}
               className={`art-tile${draggingId === item.id ? " art-tile-dragging" : ""}`}
-              draggable={isOwner}
+              draggable={isOwner && dragArmed}
               onDragStart={isOwner ? handleDragStart(item.id) : undefined}
               onDragOver={isOwner ? handleDragOver(item.id) : undefined}
               onDrop={isOwner ? handleDrop : undefined}
+              onDragEnd={isOwner ? disarmDrag : undefined}
             >
+              {isOwner && (
+                <span
+                  className="drag-handle material-symbols-outlined"
+                  onMouseDown={armDrag}
+                  onMouseUp={disarmDrag}
+                  aria-hidden="true"
+                >
+                  drag_indicator
+                </span>
+              )}
               <img
                 src={item.image_path}
                 alt={item.caption || ""}
                 className="art-tile-image"
                 onClick={() => setLightboxItem(item)}
+                draggable={false}
               />
 
               {editingId === item.id ? (

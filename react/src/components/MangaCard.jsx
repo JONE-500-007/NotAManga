@@ -6,7 +6,7 @@ export default function MangaCard({ manga }) {
     <Link to={`/manga/${manga.id}`} className="manga-card">
       <div className="manga-card-cover">
         {manga.cover_path ? (
-          <img src={manga.cover_path} alt={manga.title} />
+          <img src={manga.cover_path} alt={manga.title} draggable={false} />
         ) : (
           <div className="manga-card-placeholder" />
         )}
