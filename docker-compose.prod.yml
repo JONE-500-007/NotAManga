@@ -8,9 +8,12 @@ services:
     restart: unless-stopped
     environment:
       JWT_SECRET: "${JWT_SECRET}"
+      DB_HOST: db
+      DB_USER: justthisuser
+      DB_PASSWORD: "${POSTGRES_PASSWORD}"
+      DB_NAME: my_database
+      DB_PORT: 5432
     volumes:
-      # Uploaded manga pages/covers/art must survive redeploys, so they
-      # live in a named volume instead of the image's ephemeral filesystem.
       - uploads_data:/app/uploads
     depends_on:
       - db
