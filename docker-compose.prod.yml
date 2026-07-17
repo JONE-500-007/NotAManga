@@ -1,0 +1,60 @@
+services:
+  # Backend Node.js
+  backend:
+    container_name: node-backend2
+    build:
+      context: ./node
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      JWT_SECRET: "${JWT_SECRET}"
+    volumes:
+      # Uploaded manga pages/covers/art must survive redeploys, so they
+      # live in a named volume instead of the image's ephemeral filesystem.
+      - uploads_data:/app/uploads
+    depends_on:
+      - db
+
+  # Frontend React (built + served by nginx, not the Vite dev server)
+  frontend:
+    container_name: react-frontend2
+    build:
+      context: ./react
+      dockerfile: Dockerfile.prod
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+  # Database PostgreSQL
+  db:
+    container_name: postgres-db2
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: justthisuser
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_DB: my_database
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # pgAdmin
+  pgadmin2:
+    container_name: pgadmin2
+    image: dpage/pgadmin4
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "${PGADMIN_EMAIL}"
+      PGADMIN_DEFAULT_PASSWORD: "${PGADMIN_PASSWORD}"
+    volumes:
+      - pgadmin_data2:/var/lib/pgadmin
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
+  pgadmin_data2:
+  uploads_data:
