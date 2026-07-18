@@ -45,6 +45,15 @@
   gap: 14px;
 }
 
+/* Unlike .navbar-actions-desktop, this stays visible at every width — a
+   logged-out visitor has no hamburger/drawer to fall back on, so hiding it
+   below the mobile breakpoint would leave no way to sign in at all. */
+.navbar-guest-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .lang-toggle {
   display: flex;
   align-items: center;
@@ -1745,10 +1754,40 @@ textarea.markdown-field {
   overflow-wrap: anywhere;
 }
 
+/* The global h1/h2 rule (index.css) is sized for standalone page section
+   titles (e.g. h2's 32px margin-top before "Works"/"Chapters") — far too
+   much space between two consecutive headings inside actual markdown prose
+   like a bio or manga description. Override tighter wherever rendered
+   markdown lands. */
+.markdown-preview-content h1,
+.markdown-preview-content h2,
+.markdown-preview-content h3,
+.manga-description h1,
+.manga-description h2,
+.manga-description h3,
+.shelf-description h1,
+.shelf-description h2,
+.shelf-description h3,
+.category-description h1,
+.category-description h2,
+.category-description h3 {
+  margin: 18px 0 6px;
+  line-height: 1.3;
+}
+
 .markdown-preview-content p:first-child,
 .markdown-preview-content h1:first-child,
 .markdown-preview-content h2:first-child,
-.markdown-preview-content h3:first-child {
+.markdown-preview-content h3:first-child,
+.manga-description h1:first-child,
+.manga-description h2:first-child,
+.manga-description h3:first-child,
+.shelf-description h1:first-child,
+.shelf-description h2:first-child,
+.shelf-description h3:first-child,
+.category-description h1:first-child,
+.category-description h2:first-child,
+.category-description h3:first-child {
   margin-top: 0;
 }
 
@@ -2003,7 +2042,8 @@ textarea.markdown-field {
     justify-content: flex-end;
   }
 
-  .navbar-actions-desktop {
+  .navbar-actions-desktop,
+  .navbar-guest-actions {
     display: none;
   }
 

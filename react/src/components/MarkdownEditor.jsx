@@ -32,6 +32,19 @@ function prependLine(field, prefix) {
   return { newValue, cursorStart: cursorPos, cursorEnd: cursorPos };
 }
 
+// Inserted as literal HTML rather than relying on marked's breaks:true
+// (which turns a plain "\n" into "<br>" inside a paragraph) because that
+// only works within paragraph text — a heading's line ends at the first
+// real newline character, so a "\n" there just truncates the heading and
+// starts a new paragraph instead of breaking within it. A literal "<br>",
+// having no newline character of its own, works the same everywhere.
+function insertAtCursor(field, text) {
+  const { selectionStart, selectionEnd, value } = field;
+  const newValue = value.slice(0, selectionStart) + text + value.slice(selectionEnd);
+  const cursorPos = selectionStart + text.length;
+  return { newValue, cursorStart: cursorPos, cursorEnd: cursorPos };
+}
+
 export default function MarkdownEditor({
   value,
   onChange,
@@ -115,6 +128,34 @@ export default function MarkdownEditor({
             </button>
             <button type="button" onClick={() => apply((field) => prependLine(field, "1."))}>
               1.
+            </button>
+          </>
+        )}
+        {multiline && (
+          <>
+            <button
+              type="button"
+              title="Line break"
+              aria-label="Line break"
+              onClick={() => apply((field) => insertAtCursor(field, "<br>"))}
+            >
+              <span className="material-symbols-outlined">keyboard_return</span>
+            </button>
+            <button
+              type="button"
+              title="Non-breaking space"
+              aria-label="Non-breaking space"
+              onClick={() => apply((field) => insertAtCursor(field, "&nbsp;"))}
+            >
+              <span className="material-symbols-outlined">space_bar</span>
+            </button>
+            <button
+              type="button"
+              title="Horizontal rule"
+              aria-label="Horizontal rule"
+              onClick={() => apply((field) => insertAtCursor(field, "\n\n---\n\n"))}
+            >
+              <span className="material-symbols-outlined">horizontal_rule</span>
             </button>
           </>
         )}
