@@ -16,6 +16,23 @@ function requireAuth(req, res, next) {
   }
 }
 
+// Used on read-only routes that should work for anonymous visitors but still
+// personalize the response (e.g. isOwner checks) when a valid session cookie
+// is present. Unlike requireAuth, a missing/invalid/expired token is not an
+// error here — it just leaves req.user unset.
+function optionalAuth(req, res, next) {
+  const token = req.cookies.token;
+  if (!token) return next();
+
+  try {
+    req.user = verify(token);
+    res.cookie("token", sign(req.user), COOKIE_OPTIONS);
+  } catch {
+    // Invalid/expired token on a public route: proceed unauthenticated.
+  }
+  next();
+}
+
 function requireRole(...roles) {
   return (req, res, next) => {
     if (!roles.includes(req.user?.role)) {
@@ -36,4 +53,4 @@ async function requireMangaOwner(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth, requireRole, requireMangaOwner };
+module.exports = { requireAuth, optionalAuth, requireRole, requireMangaOwner };

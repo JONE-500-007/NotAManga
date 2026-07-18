@@ -75,12 +75,56 @@
 .navbar-user {
   display: flex;
   align-items: center;
+  gap: 10px;
+  padding: 5px 12px 5px 5px;
+  border-radius: 999px;
   font-size: 14px;
   color: var(--text-h);
+  background: transparent;
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.navbar-user:hover {
+  background: var(--surface-alt);
+  border-color: var(--border);
+  transform: translateY(-1px);
+}
+
+.navbar-user:active {
+  transform: translateY(0);
+}
+
+.navbar-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.navbar-user-avatar-placeholder {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+}
+
+.navbar-user-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  line-height: 1.2;
+}
+
+.navbar-user-name {
+  font-weight: 600;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .role-badge {
-  margin-left: 8px;
   padding: 2px 8px;
   border-radius: 999px;
   background: var(--accent-bg);
@@ -179,11 +223,27 @@
 .mobile-menu-user {
   display: flex;
   align-items: center;
+  gap: 10px;
   color: var(--text-h);
   font-weight: 600;
-  padding-bottom: 10px;
-  margin-bottom: 4px;
-  border-bottom: 1px solid var(--border);
+  padding: 12px 14px;
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-alt);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.mobile-menu-user:active {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+}
+
+.mobile-menu-user-chevron {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 22px;
+  flex-shrink: 0;
 }
 
 .btn {
@@ -447,13 +507,44 @@
 
 .manga-uploader-credit {
   margin-top: -8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 16px 5px 6px;
   color: var(--text-muted);
   font-size: 13px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.manga-uploader-credit:hover {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .manga-uploader-credit span {
   color: var(--text-h);
   font-weight: 600;
+  transition: color 0.15s;
+}
+
+.manga-uploader-credit:hover span {
+  color: var(--accent);
+}
+
+.uploader-avatar-sm {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.uploader-avatar-placeholder {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
 }
 
 .manga-description {
@@ -603,11 +694,40 @@
 /* Auth + upload forms */
 
 .auth-page {
+  position: relative;
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
+}
+
+.auth-back-btn {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-h);
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: var(--shadow);
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.auth-back-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.auth-back-btn .material-symbols-outlined {
+  font-size: 18px;
 }
 
 .auth-card,
@@ -659,9 +779,74 @@
   border-color: var(--accent);
 }
 
+.auth-card input:disabled,
+.upload-form input:disabled,
+.upload-form textarea:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
 .form-error {
   color: var(--danger);
   font-size: 14px;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.google-btn {
+  gap: 10px;
+}
+
+.google-btn-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.auth-switch {
+  text-align: center;
+  font-size: 13px;
+}
+
+.auth-switch a {
+  color: var(--accent);
+}
+
+.auth-switch a:hover {
+  text-decoration: underline;
+}
+
+.auth-forgot-link {
+  align-self: flex-end;
+  margin-top: -10px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.auth-forgot-link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.auth-message {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .upload-progress {
@@ -1946,6 +2131,30 @@ textarea.markdown-field {
   .shelf-scroll > .manga-card {
     width: 130px;
   }
+
+  .auth-back-btn {
+    top: 12px;
+    left: 12px;
+    padding: 7px 14px 7px 10px;
+    font-size: 13px;
+  }
+
+  .auth-card,
+  .upload-form {
+    padding: 24px 20px;
+  }
+
+  .manga-uploader-credit {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .manga-uploader-credit span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 @media (max-width: 768px) {
@@ -1960,5 +2169,218 @@ textarea.markdown-field {
 
   .reader-longstrip-group.reader-spread-double {
     max-width: 720px;
+  }
+}
+
+/* Profile page */
+
+.profile-banner-wrap {
+  position: relative;
+  margin-bottom: 56px;
+}
+
+.profile-banner {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 320px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.profile-banner-placeholder {
+  background: var(--surface-alt);
+}
+
+.profile-avatar-wrap {
+  position: absolute;
+  left: 24px;
+  bottom: -40px;
+}
+
+.profile-avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid var(--bg);
+  background: var(--surface);
+}
+
+.profile-avatar-placeholder {
+  background: var(--surface-alt);
+}
+
+.profile-edit-overlay-btn {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  cursor: pointer;
+  border: 2px solid var(--bg);
+}
+
+.profile-edit-overlay-btn input[type="file"] {
+  display: none;
+}
+
+.profile-banner-edit {
+  top: 10px;
+  right: 10px;
+}
+
+.profile-avatar-edit {
+  right: -4px;
+  bottom: -4px;
+}
+
+.profile-header-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.profile-header-info h1 {
+  margin: 0;
+}
+
+.profile-edit-form {
+  max-width: 640px;
+  margin: 0 0 24px;
+}
+
+.profile-email-locked-hint {
+  margin-top: -10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.profile-email-status {
+  margin-top: -6px;
+  font-size: 14px;
+}
+
+.profile-email-status,
+.profile-email-status p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.profile-email-status .material-symbols-outlined {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.profile-email-verified {
+  color: var(--accent);
+}
+
+.profile-email-unverified {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: var(--danger);
+}
+
+.profile-verification-sent {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* Image cropper */
+
+.cropper-modal {
+  gap: 16px;
+}
+
+.cropper-panel {
+  width: 100%;
+  max-width: 720px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  cursor: default;
+}
+
+.cropper-panel h2 {
+  margin: 0;
+}
+
+.cropper-canvas-area {
+  position: relative;
+  width: 100%;
+  /* Generous, mostly-viewport-driven size: the more room the image has to
+     be dragged/zoomed within, the less "stuck" the crop interaction feels. */
+  height: min(60vh, 520px);
+  background: var(--bg);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* .cropper-modal reuses .lightbox-overlay for its backdrop/centering, but
+   that class's "img { max-height: 80vh }" rule (meant for a plain shrink-to-
+   fit preview image) also matches react-easy-crop's internal <img> several
+   levels down. That fights the library's own aspect-preserving
+   width:100%/height:auto sizing — the max-height wins on specificity and
+   clamps height independently of width, visibly stretching/squishing the
+   crop preview. Reset it here with higher specificity so the library's own
+   sizing is untouched. */
+.cropper-panel .cropper-canvas-area img {
+  max-width: none;
+  max-height: none;
+}
+
+.cropper-zoom {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.cropper-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .profile-avatar-wrap {
+    left: 16px;
+  }
+
+  .profile-avatar {
+    width: 76px;
+    height: 76px;
+  }
+
+  .profile-banner-wrap {
+    margin-bottom: 46px;
+  }
+
+  .profile-edit-overlay-btn {
+    width: 30px;
+    height: 30px;
+  }
+
+  .cropper-panel {
+    padding: 16px;
+  }
+
+  .cropper-canvas-area {
+    height: min(50vh, 360px);
   }
 }

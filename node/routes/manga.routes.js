@@ -2,32 +2,18 @@ const express = require("express");
 const fs = require("fs/promises");
 const path = require("path");
 const pool = require("../db/pool");
-const { requireAuth, requireRole, requireMangaOwner } = require("../middleware/auth");
-const { coverUpload, chapterPagesUpload, artUpload, UPLOADS_ROOT, PAGES_DIR } = require("../middleware/upload");
+const { requireAuth, optionalAuth, requireRole, requireMangaOwner } = require("../middleware/auth");
+const { coverUpload, chapterPagesUpload, artUpload, PAGES_DIR } = require("../middleware/upload");
 const { savePageFiles } = require("../utils/pageStorage");
 const { reorderRows } = require("../utils/reorder");
+const { deleteUploadedFile } = require("../utils/fileStorage");
+const { DEFAULT_AVATAR_PATH } = require("../middleware/upload");
 
 const router = express.Router();
 
-function deleteUploadedFile(publicPath) {
-  if (!publicPath) return Promise.resolve();
-  const relative = publicPath.replace(/^\/uploads\//, "");
-  return fs.unlink(path.join(UPLOADS_ROOT, relative)).catch(() => {});
-}
-
-router.get("/manga", requireAuth, async (req, res) => {
+router.get("/manga", optionalAuth, async (req, res) => {
   const result = await pool.query(
     "SELECT id, title, cover_path FROM manga ORDER BY created_at DESC"
-  );
-  res.json(result.rows);
-});
-
-// Must be registered before GET /manga/:mangaId, otherwise "mine" would be
-// captured as a mangaId.
-router.get("/manga/mine", requireAuth, requireRole("uploader", "admin"), async (req, res) => {
-  const result = await pool.query(
-    "SELECT id, title, cover_path FROM manga WHERE uploader_id = $1 ORDER BY created_at DESC",
-    [req.user.id]
   );
   res.json(result.rows);
 });
@@ -44,10 +30,12 @@ router.post("/manga", requireAuth, requireRole("uploader", "admin"), coverUpload
   res.status(201).json(result.rows[0]);
 });
 
-router.get("/manga/:mangaId", requireAuth, async (req, res) => {
+router.get("/manga/:mangaId", optionalAuth, async (req, res) => {
   const { mangaId } = req.params;
   const mangaResult = await pool.query(
-    `SELECT m.*, u.username AS uploader_username FROM manga m
+    `SELECT m.*, u.username AS uploader_username, u.display_name AS uploader_display_name,
+            COALESCE(u.avatar_path, '${DEFAULT_AVATAR_PATH}') AS uploader_avatar_path
+     FROM manga m
      JOIN users u ON u.id = m.uploader_id
      WHERE m.id = $1`,
     [mangaId]
@@ -222,7 +210,7 @@ router.delete(
   }
 );
 
-router.get("/manga/:mangaId/chapters/:chapterId", requireAuth, async (req, res) => {
+router.get("/manga/:mangaId/chapters/:chapterId", optionalAuth, async (req, res) => {
   const { mangaId, chapterId } = req.params;
 
   const chapterResult = await pool.query(
@@ -350,7 +338,7 @@ router.delete(
   }
 );
 
-router.get("/manga/:mangaId/art", requireAuth, async (req, res) => {
+router.get("/manga/:mangaId/art", optionalAuth, async (req, res) => {
   const { mangaId } = req.params;
   const result = await pool.query(
     "SELECT id, image_path, caption, position FROM art WHERE manga_id = $1 ORDER BY position ASC",

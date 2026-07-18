@@ -12,6 +12,12 @@ services:
       DB_PASSWORD: "${POSTGRES_PASSWORD}"
       DB_NAME: my_database
       DB_PORT: 5432
+      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
+      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
+      GOOGLE_REDIRECT_URI: "${GOOGLE_REDIRECT_URI}"
+      FRONTEND_URL: "${FRONTEND_URL}"
+      RESEND_API_KEY: "${RESEND_API_KEY}"
+      EMAIL_FROM: "${EMAIL_FROM}"
     volumes:
       - uploads_data:/app/uploads
     depends_on:
@@ -24,7 +30,7 @@ services:
       dockerfile: Dockerfile.prod
     restart: unless-stopped
     ports:
-      - "5173:80"
+      - "80:80"
     depends_on:
       - backend
 

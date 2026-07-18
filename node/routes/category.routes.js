@@ -1,11 +1,11 @@
 const express = require("express");
 const pool = require("../db/pool");
-const { requireAuth, requireRole } = require("../middleware/auth");
+const { requireAuth, optionalAuth, requireRole } = require("../middleware/auth");
 const { reorderRows } = require("../utils/reorder");
 
 const router = express.Router();
 
-router.get("/categories", requireAuth, async (req, res) => {
+router.get("/categories", optionalAuth, async (req, res) => {
   const categoriesResult = await pool.query(
     "SELECT id, title, description, position FROM categories ORDER BY position ASC"
   );

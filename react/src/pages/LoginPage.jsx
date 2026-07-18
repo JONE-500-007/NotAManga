@@ -1,11 +1,15 @@
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useLanguage } from "../context/LanguageContext";
+import GoogleButton from "../components/GoogleButton";
 
 export default function LoginPage() {
   const { user, login } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
-  const [username, setUsername] = useState("");
+  const [searchParams] = useSearchParams();
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -17,10 +21,10 @@ export default function LoginPage() {
     setError("");
     setSubmitting(true);
     try {
-      await login(username, password);
+      await login(identifier, password);
       navigate("/");
-    } catch {
-      setError("Invalid username or password");
+    } catch (err) {
+      setError(err.message || t("login.error"));
     } finally {
       setSubmitting(false);
     }
@@ -28,16 +32,24 @@ export default function LoginPage() {
 
   return (
     <div className="auth-page">
+      <Link to="/" className="auth-back-btn">
+        <span className="material-symbols-outlined">arrow_back</span>
+        {t("login.backToIndex")}
+      </Link>
+
       <form className="auth-card" onSubmit={handleSubmit}>
-        <h1>Sign in</h1>
+        <h1>{t("login.title")}</h1>
+
+        {searchParams.get("error") === "google" && <p className="form-error">{t("login.googleError")}</p>}
+        {searchParams.get("reset") === "1" && <p className="auth-message">{t("login.resetSuccess")}</p>}
 
         <label>
-          Username
-          <input value={username} onChange={(e) => setUsername(e.target.value)} required />
+          {t("login.identifier")}
+          <input value={identifier} onChange={(e) => setIdentifier(e.target.value)} required />
         </label>
 
         <label>
-          Password
+          {t("login.password")}
           <input
             type="password"
             value={password}
@@ -46,11 +58,25 @@ export default function LoginPage() {
           />
         </label>
 
+        <Link to="/forgot-password" className="auth-forgot-link">
+          {t("login.forgotPassword")}
+        </Link>
+
         {error && <p className="form-error">{error}</p>}
 
         <button type="submit" className="btn btn-accent" disabled={submitting}>
-          Sign in
+          {t("login.submit")}
         </button>
+
+        <div className="auth-divider">
+          <span>{t("common.or")}</span>
+        </div>
+
+        <GoogleButton>{t("login.orGoogle")}</GoogleButton>
+
+        <p className="auth-switch">
+          <Link to="/register">{t("login.registerPrompt")}</Link>
+        </p>
       </form>
     </div>
   );

@@ -158,9 +158,15 @@ export default function MangaDetailPage() {
         )}
         <div className="manga-hero-info">
           <h1 dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(manga.title) }} />
-          <p className="manga-uploader-credit">
-            {t("detail.by")} <span>{manga.uploader_username}</span>
-          </p>
+          <Link to={`/users/${manga.uploader_id}`} className="manga-uploader-credit">
+            {t("detail.by")}
+            {manga.uploader_avatar_path ? (
+              <img src={manga.uploader_avatar_path} alt="" className="uploader-avatar-sm" />
+            ) : (
+              <span className="uploader-avatar-sm uploader-avatar-placeholder" />
+            )}
+            <span>{manga.uploader_display_name || manga.uploader_username}</span>
+          </Link>
           {manga.description && (
             <div
               className="manga-description"

@@ -64,6 +64,30 @@ async function initSchema(pool) {
       PRIMARY KEY (category_id, manga_id),
       UNIQUE (category_id, position)
     );
+
+    ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_path TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS banner_path TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider TEXT NOT NULL DEFAULT 'local';
+
+    ALTER TABLE users DROP CONSTRAINT IF EXISTS users_auth_provider_check;
+    ALTER TABLE users ADD CONSTRAINT users_auth_provider_check CHECK (auth_provider IN ('local', 'google'));
+
+    ALTER TABLE users DROP CONSTRAINT IF EXISTS users_auth_method_check;
+    ALTER TABLE users ADD CONSTRAINT users_auth_method_check
+      CHECK (password_hash IS NOT NULL OR google_id IS NOT NULL);
+
+    CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique_idx ON users (LOWER(email)) WHERE email IS NOT NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS users_google_id_unique_idx ON users (google_id) WHERE google_id IS NOT NULL;
+
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT false;
+    -- Google already confirms the email address, so Google-authenticated
+    -- accounts don't need our own verification step.
+    UPDATE users SET email_verified = true WHERE auth_provider = 'google' AND email_verified = false;
   `);
 }
 

@@ -11,6 +11,12 @@ services:
     environment:
       JWT_SECRET: "dev-only-insecure-secret-change-me"
       DB_PASSWORD: "mysqlpass1122"
+      GOOGLE_CLIENT_ID: "937184393700-fd6khpjjnrjtvgu17mbjei3sftiln1po.apps.googleusercontent.com"
+      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
+      GOOGLE_REDIRECT_URI: "http://localhost:5173/api/auth/google/callback"
+      FRONTEND_URL: "http://localhost:5173"
+      RESEND_API_KEY: "${RESEND_API_KEY}"
+      EMAIL_FROM: "NotAManga <hello@notamanga.dpdns.org>"
     command: sh -c "npm install && npm start"
     depends_on:
       - db

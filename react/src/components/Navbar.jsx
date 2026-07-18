@@ -46,20 +46,22 @@ export default function Navbar() {
                   {t("nav.uploadManga")}
                 </Link>
               )}
-              {(user.role === "uploader" || user.role === "admin") && (
-                <Link to="/my-uploads" className="btn btn-ghost">
-                  {t("nav.myUploads")}
-                </Link>
-              )}
               {user.role === "admin" && (
                 <Link to="/admin/categories" className="btn btn-ghost">
                   {t("nav.admin")}
                 </Link>
               )}
-              <span className="navbar-user">
-                {user.username}
-                <span className="role-badge">{t(`role.${user.role}`)}</span>
-              </span>
+              <Link to="/profile" className="navbar-user">
+                {user.avatar_path ? (
+                  <img src={user.avatar_path} alt="" className="navbar-user-avatar" />
+                ) : (
+                  <span className="navbar-user-avatar navbar-user-avatar-placeholder" />
+                )}
+                <span className="navbar-user-text">
+                  <span className="navbar-user-name">{user.display_name || user.username}</span>
+                  <span className="role-badge">{t(`role.${user.role}`)}</span>
+                </span>
+              </Link>
               <button className="btn btn-ghost" onClick={handleLogout}>
                 {t("nav.logout")}
               </button>
@@ -78,9 +80,14 @@ export default function Navbar() {
             </button>
           </>
         ) : (
-          <Link to="/login" className="btn btn-ghost">
-            {t("nav.login")}
-          </Link>
+          <div className="navbar-actions-desktop">
+            <Link to="/login" className="btn btn-ghost">
+              {t("nav.login")}
+            </Link>
+            <Link to="/register" className="btn btn-accent">
+              {t("nav.register")}
+            </Link>
+          </div>
         )}
       </div>
 
@@ -90,18 +97,23 @@ export default function Navbar() {
             <Link to="/" className="btn btn-ghost" onClick={closeMenu}>
               {t("nav.browse")}
             </Link>
-            <div className="mobile-menu-user">
-              {user.username}
-              <span className="role-badge">{t(`role.${user.role}`)}</span>
-            </div>
+            <Link to="/profile" className="mobile-menu-user" onClick={closeMenu}>
+              {user.avatar_path ? (
+                <img src={user.avatar_path} alt="" className="navbar-user-avatar" />
+              ) : (
+                <span className="navbar-user-avatar navbar-user-avatar-placeholder" />
+              )}
+              <span className="navbar-user-text">
+                <span className="navbar-user-name">{user.display_name || user.username}</span>
+                <span className="role-badge">{t(`role.${user.role}`)}</span>
+              </span>
+              <span className="material-symbols-outlined mobile-menu-user-chevron" aria-hidden="true">
+                chevron_right
+              </span>
+            </Link>
             {(user.role === "uploader" || user.role === "admin") && (
               <Link to="/upload/manga" className="btn btn-accent" onClick={closeMenu}>
                 {t("nav.uploadManga")}
-              </Link>
-            )}
-            {(user.role === "uploader" || user.role === "admin") && (
-              <Link to="/my-uploads" className="btn btn-ghost" onClick={closeMenu}>
-                {t("nav.myUploads")}
               </Link>
             )}
             {user.role === "admin" && (
