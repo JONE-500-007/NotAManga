@@ -17,6 +17,7 @@ export default function EditMangaPage() {
   const [manga, setManga] = useState(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [format, setFormat] = useState("manga");
   const [cover, setCover] = useState(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -42,6 +43,7 @@ export default function EditMangaPage() {
       setManga(data);
       setTitle(data.title);
       setDescription(data.description || "");
+      setFormat(data.format || "manga");
     });
   }, [mangaId]);
 
@@ -60,6 +62,7 @@ export default function EditMangaPage() {
       const formData = new FormData();
       formData.append("title", title);
       formData.append("description", description);
+      formData.append("format", format);
       if (cover) formData.append("cover", cover);
       await api.patchForm(`/manga/${mangaId}`, formData, setUploadProgress);
       navigate(`/manga/${mangaId}`);
@@ -98,6 +101,18 @@ export default function EditMangaPage() {
           {t("uploadManga.description")}
           <MarkdownEditor value={description} onChange={setDescription} />
         </label>
+
+        <div className="settings-row">
+          <span className="settings-label">{t("uploadManga.format")}</span>
+          <div className="settings-toggle-group">
+            <button type="button" className={format === "manga" ? "active" : ""} onClick={() => setFormat("manga")}>
+              {t("uploadManga.formatManga")}
+            </button>
+            <button type="button" className={format === "comic" ? "active" : ""} onClick={() => setFormat("comic")}>
+              {t("uploadManga.formatComic")}
+            </button>
+          </div>
+        </div>
 
         {manga.cover_path && (
           <div>

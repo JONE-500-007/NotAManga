@@ -21,6 +21,7 @@ export default function ReaderPage() {
   const { settings, setMode, setDoublePage, setDirection, setShowProgress, setZoom } = useReaderSettings();
 
   const [chapter, setChapter] = useState(null);
+  const [manga, setManga] = useState(null);
   const [chapterList, setChapterList] = useState([]);
   const [groupIndex, setGroupIndex] = useState(0);
   const [visibleGroupIndex, setVisibleGroupIndex] = useState(0);
@@ -42,8 +43,20 @@ export default function ReaderPage() {
   }, [mangaId, chapterId]);
 
   useEffect(() => {
-    api.get(`/manga/${mangaId}`).then((data) => setChapterList(data.chapters));
+    api.get(`/manga/${mangaId}`).then((data) => {
+      setManga(data);
+      setChapterList(data.chapters);
+    });
   }, [mangaId]);
+
+  // Default the spread direction from the manga's own format each time a
+  // different manga is opened (manga reads right-to-left, comics/manhwa
+  // read left-to-right) — the reader settings panel can still override it
+  // for the rest of this session, same as any other reader setting.
+  useEffect(() => {
+    if (!manga) return;
+    setDirection(manga.format === "comic" ? "ltr" : "rtl");
+  }, [manga, setDirection]);
 
   const groupSize = settings.doublePage ? 2 : 1;
   const totalPages = chapter?.pages.length ?? 0;

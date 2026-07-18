@@ -88,6 +88,12 @@ async function initSchema(pool) {
     -- Google already confirms the email address, so Google-authenticated
     -- accounts don't need our own verification step.
     UPDATE users SET email_verified = true WHERE auth_provider = 'google' AND email_verified = false;
+
+    -- Drives the reader's default page-spread direction: manga reads
+    -- right-to-left, comics/manhwa read left-to-right.
+    ALTER TABLE manga ADD COLUMN IF NOT EXISTS format TEXT NOT NULL DEFAULT 'manga';
+    ALTER TABLE manga DROP CONSTRAINT IF EXISTS manga_format_check;
+    ALTER TABLE manga ADD CONSTRAINT manga_format_check CHECK (format IN ('manga', 'comic'));
   `);
 }
 

@@ -96,6 +96,9 @@ export default {
   "uploadManga.title": "เพิ่มการ์ตูนเรื่องใหม่",
   "uploadManga.titleLabel": "ชื่อเรื่อง",
   "uploadManga.description": "เรื่องย่อ",
+  "uploadManga.format": "รูปแบบ",
+  "uploadManga.formatManga": "มังงะ (ขวาไปซ้าย)",
+  "uploadManga.formatComic": "การ์ตูน (ซ้ายไปขวา)",
   "uploadManga.cover": "รูปปก",
   "uploadManga.submit": "สร้างเรื่อง",
 

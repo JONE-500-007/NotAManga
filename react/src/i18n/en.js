@@ -96,6 +96,9 @@ export default {
   "uploadManga.title": "Upload New Manga",
   "uploadManga.titleLabel": "Title",
   "uploadManga.description": "Description",
+  "uploadManga.format": "Format",
+  "uploadManga.formatManga": "Manga (right-to-left)",
+  "uploadManga.formatComic": "Comic (left-to-right)",
   "uploadManga.cover": "Cover image",
   "uploadManga.submit": "Create manga",
 

@@ -12,6 +12,7 @@ export default function UploadMangaPage() {
   const coverInputRef = useRef(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [format, setFormat] = useState("manga");
   const [cover, setCover] = useState(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -31,6 +32,7 @@ export default function UploadMangaPage() {
       const formData = new FormData();
       formData.append("title", title);
       formData.append("description", description);
+      formData.append("format", format);
       if (cover) formData.append("cover", cover);
       const manga = await api.postForm("/manga", formData, setUploadProgress);
       navigate(`/manga/${manga.id}`);
@@ -63,6 +65,18 @@ export default function UploadMangaPage() {
           {t("uploadManga.description")}
           <MarkdownEditor value={description} onChange={setDescription} />
         </label>
+
+        <div className="settings-row">
+          <span className="settings-label">{t("uploadManga.format")}</span>
+          <div className="settings-toggle-group">
+            <button type="button" className={format === "manga" ? "active" : ""} onClick={() => setFormat("manga")}>
+              {t("uploadManga.formatManga")}
+            </button>
+            <button type="button" className={format === "comic" ? "active" : ""} onClick={() => setFormat("comic")}>
+              {t("uploadManga.formatComic")}
+            </button>
+          </div>
+        </div>
 
         <label>
           {t("uploadManga.cover")}

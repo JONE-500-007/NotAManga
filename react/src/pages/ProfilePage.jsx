@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
@@ -9,6 +9,14 @@ import MarkdownEditor from "../components/MarkdownEditor";
 import ImageCropper from "../components/ImageCropper";
 import UploadProgressBar from "../components/UploadProgressBar";
 
+// Must match .profile-banner's "aspect-ratio: 16/9; max-height: 320px" in
+// App.css — on any viewport wide enough that 16:9 would exceed 320px tall,
+// the max-height wins and the banner actually renders wider than 16:9. The
+// crop tool needs to select in that same real ratio, or what you crop and
+// what ends up on screen won't match.
+const BANNER_MIN_ASPECT = 16 / 9;
+const BANNER_MAX_HEIGHT = 320;
+
 export default function ProfilePage() {
   const { userId } = useParams();
   const { user, updateUser } = useAuth();
@@ -16,6 +24,8 @@ export default function ProfilePage() {
 
   const isSelf = !userId || (user != null && Number(userId) === user.id);
   const targetId = isSelf ? user?.id : userId;
+
+  const bannerWrapRef = useRef(null);
 
   const [publicProfile, setPublicProfile] = useState(null);
   const [notFound, setNotFound] = useState(false);
@@ -28,6 +38,7 @@ export default function ProfilePage() {
 
   const [avatarPickerFile, setAvatarPickerFile] = useState(null);
   const [bannerPickerFile, setBannerPickerFile] = useState(null);
+  const [bannerAspect, setBannerAspect] = useState(BANNER_MIN_ASPECT);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadingKind, setUploadingKind] = useState(null);
 
@@ -103,7 +114,7 @@ export default function ProfilePage() {
 
   return (
     <div className="page profile-page">
-      <div className="profile-banner-wrap">
+      <div className="profile-banner-wrap" ref={bannerWrapRef}>
         {bannerPath ? (
           <img src={bannerPath} alt="" className="profile-banner" />
         ) : (
@@ -115,7 +126,13 @@ export default function ProfilePage() {
             <input
               type="file"
               accept="image/*"
-              onChange={(e) => e.target.files[0] && setBannerPickerFile(e.target.files[0])}
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const width = bannerWrapRef.current?.getBoundingClientRect().width || 0;
+                setBannerAspect(width > 0 ? Math.max(BANNER_MIN_ASPECT, width / BANNER_MAX_HEIGHT) : BANNER_MIN_ASPECT);
+                setBannerPickerFile(file);
+              }}
             />
           </label>
         )}
@@ -240,7 +257,7 @@ export default function ProfilePage() {
       {bannerPickerFile && (
         <ImageCropper
           file={bannerPickerFile}
-          aspect={16 / 9}
+          aspect={bannerAspect}
           onCancel={() => setBannerPickerFile(null)}
           onCropped={(blob) => handleCropped(blob, "banner")}
         />

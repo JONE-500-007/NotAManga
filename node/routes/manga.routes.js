@@ -22,10 +22,11 @@ router.post("/manga", requireAuth, requireRole("uploader", "admin"), coverUpload
   const { title, description } = req.body;
   if (!title) return res.status(400).json({ error: "Title is required" });
 
+  const format = req.body.format === "comic" ? "comic" : "manga";
   const coverPath = req.file ? `/uploads/covers/${req.file.filename}` : null;
   const result = await pool.query(
-    "INSERT INTO manga (title, description, cover_path, uploader_id) VALUES ($1, $2, $3, $4) RETURNING *",
-    [title, description || null, coverPath, req.user.id]
+    "INSERT INTO manga (title, description, cover_path, format, uploader_id) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+    [title, description || null, coverPath, format, req.user.id]
   );
   res.status(201).json(result.rows[0]);
 });
@@ -61,6 +62,8 @@ router.patch(
     const { title, description } = req.body;
     if (!title) return res.status(400).json({ error: "Title is required" });
 
+    const format = req.body.format === "comic" ? "comic" : "manga";
+
     if (req.file) {
       const existing = await pool.query("SELECT cover_path FROM manga WHERE id = $1", [mangaId]);
       await deleteUploadedFile(existing.rows[0]?.cover_path);
@@ -68,8 +71,8 @@ router.patch(
 
     const coverPath = req.file ? `/uploads/covers/${req.file.filename}` : undefined;
     const result = await pool.query(
-      `UPDATE manga SET title = $1, description = $2, cover_path = COALESCE($3, cover_path) WHERE id = $4 RETURNING *`,
-      [title, description || null, coverPath || null, mangaId]
+      `UPDATE manga SET title = $1, description = $2, format = $3, cover_path = COALESCE($4, cover_path) WHERE id = $5 RETURNING *`,
+      [title, description || null, format, coverPath || null, mangaId]
     );
     res.json(result.rows[0]);
   }
