@@ -12,10 +12,69 @@ const { DEFAULT_AVATAR_PATH } = require("../middleware/upload");
 const router = express.Router();
 
 router.get("/manga", optionalAuth, async (req, res) => {
+  // Pinned manga (admin-ordered) float to the front in the order the admin
+  // set; everything else keeps the normal auto sort by upload date.
   const result = await pool.query(
-    "SELECT id, title, cover_path FROM manga ORDER BY created_at DESC"
+    `SELECT id, title, cover_path, pinned_position FROM manga
+     ORDER BY pinned_position IS NULL ASC, pinned_position ASC, created_at DESC`
   );
   res.json(result.rows);
+});
+
+router.patch("/manga/reorder", requireAuth, requireRole("admin"), async (req, res) => {
+  const { orderedMangaIds } = req.body;
+  if (!Array.isArray(orderedMangaIds) || orderedMangaIds.length === 0) {
+    return res.status(400).json({ error: "orderedMangaIds is required" });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await reorderRows(client, {
+      table: "manga",
+      numberColumn: "pinned_position",
+      orderedIds: orderedMangaIds,
+    });
+    await client.query("COMMIT");
+    res.json({ ok: true });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+});
+
+router.patch("/manga/:mangaId/pin", requireAuth, requireRole("admin"), async (req, res) => {
+  const { mangaId } = req.params;
+  const maxResult = await pool.query("SELECT COALESCE(MAX(pinned_position), 0) AS max FROM manga");
+  const position = Number(maxResult.rows[0].max) + 1;
+
+  const result = await pool.query(
+    "UPDATE manga SET pinned_position = $1 WHERE id = $2 RETURNING id, title, cover_path, pinned_position",
+    [position, mangaId]
+  );
+  if (result.rows.length === 0) return res.status(404).json({ error: "Manga not found" });
+  res.json(result.rows[0]);
+});
+
+router.delete("/manga/:mangaId/pin", requireAuth, requireRole("admin"), async (req, res) => {
+  const { mangaId } = req.params;
+  const result = await pool.query(
+    "UPDATE manga SET pinned_position = NULL WHERE id = $1 RETURNING pinned_position",
+    [mangaId]
+  );
+  const unpinned = result.rows[0];
+  if (!unpinned) return res.status(404).json({ error: "Manga not found" });
+
+  if (unpinned.pinned_position !== null) {
+    await pool.query(
+      "UPDATE manga SET pinned_position = pinned_position - 1 WHERE pinned_position > $1",
+      [unpinned.pinned_position]
+    );
+  }
+
+  res.json({ ok: true });
 });
 
 router.post("/manga", requireAuth, requireRole("uploader", "admin"), coverUpload.single("cover"), async (req, res) => {

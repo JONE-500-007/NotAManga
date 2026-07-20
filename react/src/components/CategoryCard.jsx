@@ -66,6 +66,15 @@ export default function CategoryCard({
     setEditing(false);
   };
 
+  const handleCardSizeChange = async (card_size) => {
+    const updated = await api.patch(`/categories/${category.id}`, {
+      title: category.title,
+      description: category.description,
+      card_size,
+    });
+    onUpdate(updated);
+  };
+
   const handleDelete = async () => {
     if (!window.confirm(t("admin.categories.deleteConfirm"))) return;
     await api.del(`/categories/${category.id}`);
@@ -116,6 +125,19 @@ export default function CategoryCard({
           <h3 dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(category.title) }} />
         )}
         <div className="category-card-controls">
+          <label className="category-size-select">
+            {t("admin.categories.cardSize")}
+            <select
+              value={category.card_size || "medium"}
+              onChange={(e) => handleCardSizeChange(e.target.value)}
+            >
+              <option value="xs">{t("admin.categories.sizeXSmall")}</option>
+              <option value="small">{t("admin.categories.sizeSmall")}</option>
+              <option value="medium">{t("admin.categories.sizeMedium")}</option>
+              <option value="large">{t("admin.categories.sizeLarge")}</option>
+              <option value="xl">{t("admin.categories.sizeXLarge")}</option>
+            </select>
+          </label>
           <button type="button" className="icon-btn" onClick={onMoveUp} disabled={index === 0} aria-label={t("common.moveUp")}>
             &uarr;
           </button>

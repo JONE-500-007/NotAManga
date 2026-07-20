@@ -4,10 +4,11 @@ const { requireAuth, optionalAuth, requireRole } = require("../middleware/auth")
 const { reorderRows } = require("../utils/reorder");
 
 const router = express.Router();
+const CARD_SIZES = ["xs", "small", "medium", "large", "xl"];
 
 router.get("/categories", optionalAuth, async (req, res) => {
   const categoriesResult = await pool.query(
-    "SELECT id, title, description, position FROM categories ORDER BY position ASC"
+    "SELECT id, title, description, position, card_size FROM categories ORDER BY position ASC"
   );
   const categories = categoriesResult.rows;
 
@@ -64,12 +65,15 @@ router.patch("/categories/reorder", requireAuth, requireRole("admin"), async (re
 
 router.patch("/categories/:categoryId", requireAuth, requireRole("admin"), async (req, res) => {
   const { categoryId } = req.params;
-  const { title, description } = req.body;
+  const { title, description, card_size } = req.body;
   if (!title) return res.status(400).json({ error: "Title is required" });
+  if (card_size !== undefined && !CARD_SIZES.includes(card_size)) {
+    return res.status(400).json({ error: "Invalid card_size" });
+  }
 
   const result = await pool.query(
-    "UPDATE categories SET title = $1, description = $2 WHERE id = $3 RETURNING *",
-    [title, description || null, categoryId]
+    "UPDATE categories SET title = $1, description = $2, card_size = COALESCE($3, card_size) WHERE id = $4 RETURNING *",
+    [title, description || null, card_size || null, categoryId]
   );
   if (result.rows.length === 0) return res.status(404).json({ error: "Category not found" });
   res.json(result.rows[0]);

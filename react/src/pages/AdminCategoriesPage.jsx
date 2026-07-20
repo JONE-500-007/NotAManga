@@ -3,12 +3,14 @@ import { api } from "../api/client";
 import { useLanguage } from "../context/LanguageContext";
 import { useDragReorder } from "../hooks/useDragReorder";
 import CategoryCard from "../components/CategoryCard";
+import MangaOrderPanel from "../components/MangaOrderPanel";
 import MarkdownEditor from "../components/MarkdownEditor";
 
 export default function AdminCategoriesPage() {
   const { t } = useLanguage();
   const [categories, setCategories] = useState(null);
   const [allManga, setAllManga] = useState([]);
+  const [settings, setSettings] = useState({ all_manga_card_size: "medium" });
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [error, setError] = useState("");
@@ -17,7 +19,13 @@ export default function AdminCategoriesPage() {
   useEffect(() => {
     api.get("/categories").then(setCategories);
     api.get("/manga").then(setAllManga);
+    api.get("/settings").then(setSettings);
   }, []);
+
+  const handleAllMangaCardSizeChange = async (all_manga_card_size) => {
+    const updated = await api.patch("/settings", { all_manga_card_size });
+    setSettings(updated);
+  };
 
   const commitCategoryOrder = async (orderedCategoryIds) => {
     await api.patch("/categories/reorder", { orderedCategoryIds });
@@ -121,6 +129,13 @@ export default function AdminCategoriesPage() {
           </div>
         </>
       )}
+
+      <MangaOrderPanel
+        allManga={allManga}
+        setAllManga={setAllManga}
+        cardSize={settings.all_manga_card_size}
+        onCardSizeChange={handleAllMangaCardSizeChange}
+      />
     </div>
   );
 }

@@ -94,6 +94,29 @@ async function initSchema(pool) {
     ALTER TABLE manga ADD COLUMN IF NOT EXISTS format TEXT NOT NULL DEFAULT 'manga';
     ALTER TABLE manga DROP CONSTRAINT IF EXISTS manga_format_check;
     ALTER TABLE manga ADD CONSTRAINT manga_format_check CHECK (format IN ('manga', 'comic'));
+
+    -- Lets an admin scale up/down how big a category's cards render on the
+    -- browse page (mirrors mangadex.org's per-shelf card size control).
+    ALTER TABLE categories ADD COLUMN IF NOT EXISTS card_size TEXT NOT NULL DEFAULT 'medium';
+    ALTER TABLE categories DROP CONSTRAINT IF EXISTS categories_card_size_check;
+    ALTER TABLE categories ADD CONSTRAINT categories_card_size_check CHECK (card_size IN ('xs', 'small', 'medium', 'large', 'xl'));
+
+    -- Nullable + UNIQUE so most manga stay on the default auto (upload date)
+    -- order; only manga an admin explicitly pins get a position and float
+    -- to the front of "All Manga".
+    ALTER TABLE manga ADD COLUMN IF NOT EXISTS pinned_position INTEGER UNIQUE;
+
+    -- Single-row table for site-wide display settings that don't belong to
+    -- any one category, e.g. the card size of the "All Manga" grid.
+    CREATE TABLE IF NOT EXISTS site_settings (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      all_manga_card_size TEXT NOT NULL DEFAULT 'medium',
+      CHECK (id = 1)
+    );
+    INSERT INTO site_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+    ALTER TABLE site_settings DROP CONSTRAINT IF EXISTS site_settings_all_manga_card_size_check;
+    ALTER TABLE site_settings ADD CONSTRAINT site_settings_all_manga_card_size_check
+      CHECK (all_manga_card_size IN ('xs', 'small', 'medium', 'large', 'xl'));
   `);
 }
 

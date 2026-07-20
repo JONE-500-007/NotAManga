@@ -8,11 +8,13 @@ export default function BrowsePage() {
   const { t } = useLanguage();
   const [manga, setManga] = useState(null);
   const [categories, setCategories] = useState(null);
+  const [allMangaCardSize, setAllMangaCardSize] = useState("medium");
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     api.get("/manga").then(setManga).catch(() => setManga([]));
     api.get("/categories").then(setCategories).catch(() => setCategories([]));
+    api.get("/settings").then((s) => setAllMangaCardSize(s.all_manga_card_size)).catch(() => {});
   }, []);
 
   if (manga === null || categories === null) return <div className="page-loading">{t("common.loading")}</div>;
@@ -60,7 +62,7 @@ export default function BrowsePage() {
                   dangerouslySetInnerHTML={{ __html: renderMarkdown(category.description) }}
                 />
               )}
-              <div className="shelf-scroll">
+              <div className={`shelf-scroll shelf-scroll--${category.card_size || "medium"}`}>
                 {category.manga.map((m) => (
                   <MangaCard key={m.id} manga={m} />
                 ))}
@@ -73,7 +75,7 @@ export default function BrowsePage() {
             {manga.length === 0 ? (
               <p className="empty-state">{t("browse.empty")}</p>
             ) : (
-              <div className="manga-grid">
+              <div className={`manga-grid manga-grid--${allMangaCardSize}`}>
                 {manga.map((m) => (
                   <MangaCard key={m.id} manga={m} />
                 ))}

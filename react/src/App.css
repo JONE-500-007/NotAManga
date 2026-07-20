@@ -354,8 +354,36 @@
 
 .manga-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  /* A fixed track size (not minmax(..., 1fr)) keeps a card exactly
+     --card-w-* wide here too, so "small"/"large"/etc. render at the same
+     physical size as the matching .shelf-scroll-- variant instead of
+     stretching to fill the row. */
+  grid-template-columns: repeat(auto-fill, var(--card-w-medium));
   gap: 20px;
+}
+
+.manga-grid--xs {
+  grid-template-columns: repeat(auto-fill, var(--card-w-xs));
+}
+
+.manga-grid--small {
+  grid-template-columns: repeat(auto-fill, var(--card-w-small));
+}
+
+.manga-grid--medium {
+  grid-template-columns: repeat(auto-fill, var(--card-w-medium));
+}
+
+.manga-grid--large {
+  grid-template-columns: repeat(auto-fill, var(--card-w-large));
+}
+
+.manga-grid--xl {
+  grid-template-columns: repeat(auto-fill, var(--card-w-xl));
+}
+
+.admin-categories-page > .category-card {
+  margin-top: 32px;
 }
 
 .manga-card {
@@ -437,7 +465,70 @@
 
 .shelf-scroll > .manga-card {
   flex-shrink: 0;
-  width: 160px;
+  width: var(--card-w-medium);
+}
+
+.shelf-scroll--xs > .manga-card {
+  width: var(--card-w-xs);
+}
+
+.shelf-scroll--small > .manga-card {
+  width: var(--card-w-small);
+}
+
+.shelf-scroll--medium > .manga-card {
+  width: var(--card-w-medium);
+}
+
+.shelf-scroll--large > .manga-card {
+  width: var(--card-w-large);
+}
+
+.shelf-scroll--xl > .manga-card {
+  width: var(--card-w-xl);
+}
+
+.category-size-select {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.category-size-select select {
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--surface-alt);
+  color: var(--text-h);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 30px 6px 12px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.category-size-select::after {
+  content: "\25be";
+  position: absolute;
+  right: 10px;
+  bottom: 7px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.category-size-select select:hover {
+  border-color: var(--accent);
+}
+
+.category-size-select select:focus {
+  outline: none;
+  border-color: var(--accent);
 }
 
 /* Manga detail */
@@ -2018,6 +2109,14 @@ textarea.markdown-field {
 /* Mobile responsive adjustments */
 
 @media (max-width: 640px) {
+  :root {
+    --card-w-xs: 80px;
+    --card-w-small: 100px;
+    --card-w-medium: 130px;
+    --card-w-large: 170px;
+    --card-w-xl: 210px;
+  }
+
   .settings-row-zoom,
   .settings-row-doublepage {
     display: none;
@@ -2065,7 +2164,6 @@ textarea.markdown-field {
   }
 
   .manga-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 14px;
   }
 
@@ -2168,8 +2266,9 @@ textarea.markdown-field {
     width: 110px;
   }
 
-  .shelf-scroll > .manga-card {
-    width: 130px;
+  .category-card-controls .category-size-select {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .auth-back-btn {

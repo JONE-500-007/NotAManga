@@ -11,6 +11,16 @@
   --accent-bg: rgba(255, 103, 64, 0.12);
   --danger: #ff5470;
   --sans: "Google Sans", "Sarabun", "Segoe UI", system-ui, Roboto, sans-serif;
+
+  /* Single source of truth for manga card width at each admin-selectable
+     size, shared by both category shelves (.shelf-scroll--*) and the All
+     Manga grid (.manga-grid--*) so the same size name renders identically
+     in both places. */
+  --card-w-xs: 90px;
+  --card-w-small: 120px;
+  --card-w-medium: 160px;
+  --card-w-large: 220px;
+  --card-w-xl: 280px;
   --shadow:
     rgba(0, 0, 0, 0.4) 0 10px 20px -5px, rgba(0, 0, 0, 0.3) 0 4px 8px -2px;
 
