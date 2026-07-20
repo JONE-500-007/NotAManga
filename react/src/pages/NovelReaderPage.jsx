@@ -110,14 +110,6 @@ export default function NovelReaderPage() {
       <div className="reader-end-card">
         <p>{t("reader.nextChapterPrompt")}</p>
         <div className="novel-reader-nav-buttons">
-          {chapter.prevChapterId && (
-            <button
-              className="btn btn-ghost"
-              onClick={() => navigate(`/manga/${mangaId}/chapter/${chapter.prevChapterId}`)}
-            >
-              &larr; {t("reader.prevChapter")}
-            </button>
-          )}
           {chapter.nextChapterId && (
             <button
               className="btn btn-accent"
