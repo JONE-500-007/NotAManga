@@ -2,6 +2,7 @@ import { useState } from "react";
 import { api } from "../api/client";
 import { useLanguage } from "../context/LanguageContext";
 import { useDragReorder } from "../hooks/useDragReorder";
+import { markdownToPlainText } from "../utils/renderMarkdown";
 import MangaCard from "./MangaCard";
 import SearchableSelect from "./SearchableSelect";
 
@@ -56,7 +57,10 @@ export default function MangaOrderPanel({ allManga, setAllManga, cardSize, onCar
     setAllManga((current) => current.map((m) => (m.id === mangaId ? { ...m, pinned_position: null } : m)));
   };
 
-  const unpinnedOptions = unpinned.map((m) => ({ value: m.id, label: truncateTitle(m.title) }));
+  const unpinnedOptions = unpinned.map((m) => ({
+    value: m.id,
+    label: truncateTitle(markdownToPlainText(m.title)),
+  }));
 
   return (
     <div className="category-card">

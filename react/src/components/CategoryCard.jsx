@@ -2,7 +2,7 @@ import { useState } from "react";
 import { api } from "../api/client";
 import { useLanguage } from "../context/LanguageContext";
 import { useDragReorder } from "../hooks/useDragReorder";
-import { renderInlineMarkdown, renderMarkdown } from "../utils/renderMarkdown";
+import { renderInlineMarkdown, renderMarkdown, markdownToPlainText } from "../utils/renderMarkdown";
 import MangaCard from "./MangaCard";
 import MarkdownEditor from "./MarkdownEditor";
 import SearchableSelect from "./SearchableSelect";
@@ -99,7 +99,10 @@ export default function CategoryCard({
   };
 
   const availableManga = allManga.filter((m) => !manga.some((cm) => cm.id === m.id));
-  const availableMangaOptions = availableManga.map((m) => ({ value: m.id, label: truncateTitle(m.title) }));
+  const availableMangaOptions = availableManga.map((m) => ({
+    value: m.id,
+    label: truncateTitle(markdownToPlainText(m.title)),
+  }));
 
   return (
     <div className="category-card">
