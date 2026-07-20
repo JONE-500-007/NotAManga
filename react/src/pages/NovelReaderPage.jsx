@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { useLanguage } from "../context/LanguageContext";
 import { renderMarkdown } from "../utils/renderMarkdown";
 import { useNovelReaderSettings, FONT_FAMILIES } from "../hooks/useNovelReaderSettings";
 import NovelReaderSettingsPanel from "../components/NovelReaderSettingsPanel";
+
+const HIDE_DELAY_MS = 2500;
 
 export default function NovelReaderPage() {
   const { mangaId, chapterId } = useParams();
@@ -14,6 +16,8 @@ export default function NovelReaderPage() {
   const [chapter, setChapter] = useState(null);
   const [chapterList, setChapterList] = useState([]);
   const [showSettings, setShowSettings] = useState(false);
+  const [chromeVisible, setChromeVisible] = useState(true);
+  const hideTimerRef = useRef(null);
 
   useEffect(() => {
     setChapter(null);
@@ -27,6 +31,40 @@ export default function NovelReaderPage() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [chapterId]);
+
+  // Auto-hide the topbar while reading, same as the manga reader — reveal
+  // it again on any scroll/mouse/touch activity, then hide it after a
+  // pause. Stays visible whenever the settings panel is open.
+  const scheduleHide = useCallback(() => {
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = setTimeout(() => setChromeVisible(false), HIDE_DELAY_MS);
+  }, []);
+
+  const showChrome = useCallback(() => {
+    setChromeVisible(true);
+    if (!showSettings) scheduleHide();
+  }, [showSettings, scheduleHide]);
+
+  useEffect(() => {
+    if (showSettings) {
+      setChromeVisible(true);
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      return;
+    }
+    scheduleHide();
+  }, [showSettings, scheduleHide]);
+
+  useEffect(() => {
+    window.addEventListener("mousemove", showChrome);
+    window.addEventListener("touchstart", showChrome);
+    window.addEventListener("scroll", showChrome, true);
+    return () => {
+      window.removeEventListener("mousemove", showChrome);
+      window.removeEventListener("touchstart", showChrome);
+      window.removeEventListener("scroll", showChrome, true);
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    };
+  }, [showChrome]);
 
   if (!chapter) return <div className="page-loading">{t("common.loading")}</div>;
 
@@ -53,43 +91,45 @@ export default function NovelReaderPage() {
 
   return (
     <div className={`novel-reader-page novel-reader-theme-${settings.theme}`}>
-      <div className="reader-topbar">
-        <Link to={`/manga/${mangaId}`} className="btn btn-ghost">
-          &larr; <span className="reader-back-label">{t("novelReader.back")}</span>
-        </Link>
-        <select
-          className="reader-chapter-select"
-          value={chapterId}
-          onChange={(e) => navigate(`/manga/${mangaId}/chapter/${e.target.value}`)}
-          aria-label={t("reader.selectChapter")}
-        >
-          {hasVolumes
-            ? volumeGroups.map((g) => (
-                <optgroup
-                  key={`volume-${g.volume ?? "none"}`}
-                  label={g.volume != null ? `${t("detail.volume")} ${g.volume}` : t("detail.noVolume")}
-                >
-                  {g.chapters.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {chapterOptionLabel(c)}
-                    </option>
-                  ))}
-                </optgroup>
-              ))
-            : chapterList.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {chapterOptionLabel(c)}
-                </option>
-              ))}
-        </select>
-        <div className="reader-topbar-right">
-          <button
-            className="btn btn-ghost reader-settings-btn"
-            onClick={() => setShowSettings(true)}
-            aria-label={t("reader.settings")}
+      <div className={`reader-chrome${chromeVisible ? "" : " chrome-hidden"}`}>
+        <div className="reader-topbar">
+          <Link to={`/manga/${mangaId}`} className="btn btn-ghost">
+            &larr; <span className="reader-back-label">{t("novelReader.back")}</span>
+          </Link>
+          <select
+            className="reader-chapter-select"
+            value={chapterId}
+            onChange={(e) => navigate(`/manga/${mangaId}/chapter/${e.target.value}`)}
+            aria-label={t("reader.selectChapter")}
           >
-            ⚙ <span className="reader-settings-label">{t("reader.settings")}</span>
-          </button>
+            {hasVolumes
+              ? volumeGroups.map((g) => (
+                  <optgroup
+                    key={`volume-${g.volume ?? "none"}`}
+                    label={g.volume != null ? `${t("detail.volume")} ${g.volume}` : t("detail.noVolume")}
+                  >
+                    {g.chapters.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {chapterOptionLabel(c)}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))
+              : chapterList.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {chapterOptionLabel(c)}
+                  </option>
+                ))}
+          </select>
+          <div className="reader-topbar-right">
+            <button
+              className="btn btn-ghost reader-settings-btn"
+              onClick={() => setShowSettings(true)}
+              aria-label={t("reader.settings")}
+            >
+              ⚙ <span className="reader-settings-label">{t("reader.settings")}</span>
+            </button>
+          </div>
         </div>
       </div>
 
