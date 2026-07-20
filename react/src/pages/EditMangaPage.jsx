@@ -338,7 +338,7 @@ export default function EditMangaPage() {
         <div className="danger-zone">
           <span className="settings-label">{t("editManga.dangerZone")}</span>
           <button type="button" className="btn btn-danger" onClick={handleDelete}>
-            {t("editManga.deleteManga")}
+            {manga.work_type === "novel" ? t("editManga.deleteNovel") : t("editManga.deleteManga")}
           </button>
         </div>
       </form>

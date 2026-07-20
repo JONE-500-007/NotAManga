@@ -156,6 +156,7 @@ export default {
   "editManga.currentCover": "Current cover",
   "editManga.dangerZone": "Danger zone",
   "editManga.deleteManga": "Delete manga",
+  "editManga.deleteNovel": "Delete Light Novel",
 
   "editChapter.title": "Edit Chapter",
   "editChapter.submit": "Save changes",

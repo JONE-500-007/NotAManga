@@ -156,6 +156,7 @@ export default {
   "editManga.currentCover": "รูปปกปัจจุบัน",
   "editManga.dangerZone": "โซนอันตราย",
   "editManga.deleteManga": "ลบเรื่องนี้",
+  "editManga.deleteNovel": "ลบนิยายเรื่องนี้",
 
   "editChapter.title": "แก้ไขตอน",
   "editChapter.submit": "บันทึกการแก้ไข",
