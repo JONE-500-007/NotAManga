@@ -45,6 +45,7 @@ export default function ProfilePage() {
   const [sendingVerification, setSendingVerification] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
   const [verificationError, setVerificationError] = useState("");
+  const [roleChangeError, setRoleChangeError] = useState("");
 
   useEffect(() => {
     if (!targetId) return;
@@ -81,6 +82,16 @@ export default function ProfilePage() {
       setSaveError(err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRoleChange = async (newRole) => {
+    setRoleChangeError("");
+    try {
+      const updated = await api.patch(`/users/${targetId}/role`, { role: newRole });
+      setPublicProfile((current) => ({ ...current, role: updated.role }));
+    } catch (err) {
+      setRoleChangeError(err.message);
     }
   };
 
@@ -159,7 +170,19 @@ export default function ProfilePage() {
       <div className="profile-header-info">
         <h1>{isSelf ? displayName || username : publicProfile.display_name || username}</h1>
         <span className="role-badge">{t(`role.${role}`)}</span>
+        {!isSelf && user?.role === "admin" && (
+          <label className="profile-role-select">
+            {t("profile.changeRole")}
+            <select value={role} onChange={(e) => handleRoleChange(e.target.value)}>
+              <option value="member">{t("role.member")}</option>
+              <option value="vvip">{t("role.vvip")}</option>
+              <option value="uploader">{t("role.uploader")}</option>
+              <option value="admin">{t("role.admin")}</option>
+            </select>
+          </label>
+        )}
       </div>
+      {roleChangeError && <p className="form-error">{roleChangeError}</p>}
 
       {uploadingKind && <UploadProgressBar percent={uploadProgress} />}
 

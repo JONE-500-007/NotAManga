@@ -10,6 +10,11 @@ export default function MangaCard({ manga }) {
         ) : (
           <div className="manga-card-placeholder" />
         )}
+        {manga.is_private && (
+          <span className="manga-card-private-badge material-symbols-outlined" aria-hidden="true">
+            lock
+          </span>
+        )}
       </div>
       <div className="manga-card-title" dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(manga.title) }} />
     </Link>

@@ -1,11 +1,13 @@
 const express = require("express");
 const pool = require("../db/pool");
-const { requireAuth, optionalAuth } = require("../middleware/auth");
+const { requireAuth, optionalAuth, requireRole } = require("../middleware/auth");
 const { avatarUpload, bannerUpload } = require("../middleware/upload");
 const { deleteUploadedFile } = require("../utils/fileStorage");
 const { SAFE_USER_COLUMNS, PUBLIC_USER_COLUMNS } = require("../utils/userColumns");
+const { visibilityFilter } = require("../utils/mangaVisibility");
 
 const router = express.Router();
+const ASSIGNABLE_ROLES = ["member", "vvip", "uploader", "admin"];
 
 router.get("/users/:userId", optionalAuth, async (req, res) => {
   const { userId } = req.params;
@@ -13,11 +15,26 @@ router.get("/users/:userId", optionalAuth, async (req, res) => {
   const user = result.rows[0];
   if (!user) return res.status(404).json({ error: "User not found" });
 
+  const visibility = visibilityFilter(req.user, 2);
   const worksResult = await pool.query(
-    "SELECT id, title, cover_path FROM manga WHERE uploader_id = $1 ORDER BY created_at DESC",
-    [userId]
+    `SELECT id, title, cover_path, is_private FROM manga m
+     WHERE uploader_id = $1 AND ${visibility.clause} ORDER BY created_at DESC`,
+    [userId, ...visibility.params]
   );
   res.json({ ...user, works: worksResult.rows });
+});
+
+router.patch("/users/:userId/role", requireAuth, requireRole("admin"), async (req, res) => {
+  const { userId } = req.params;
+  const { role } = req.body;
+  if (!ASSIGNABLE_ROLES.includes(role)) return res.status(400).json({ error: "Invalid role" });
+
+  const result = await pool.query(
+    `UPDATE users SET role = $1 WHERE id = $2 RETURNING ${PUBLIC_USER_COLUMNS}`,
+    [role, userId]
+  );
+  if (result.rows.length === 0) return res.status(404).json({ error: "User not found" });
+  res.json(result.rows[0]);
 });
 
 router.patch("/users/me", requireAuth, async (req, res) => {

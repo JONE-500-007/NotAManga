@@ -117,6 +117,51 @@ async function initSchema(pool) {
     ALTER TABLE site_settings DROP CONSTRAINT IF EXISTS site_settings_all_manga_card_size_check;
     ALTER TABLE site_settings ADD CONSTRAINT site_settings_all_manga_card_size_check
       CHECK (all_manga_card_size IN ('xs', 'small', 'medium', 'large', 'xl'));
+
+    -- Admin-managed global tag list (free-form names, e.g. "Yuri"); uploaders
+    -- can only attach/detach existing tags to manga they own, not invent
+    -- new ones.
+    CREATE TABLE IF NOT EXISTS tags (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS tags_name_unique_idx ON tags (LOWER(name));
+
+    -- Nullable: unset means the chip falls back to the default accent
+    -- styling instead of a custom background.
+    ALTER TABLE tags ADD COLUMN IF NOT EXISTS color TEXT;
+    ALTER TABLE tags DROP CONSTRAINT IF EXISTS tags_color_check;
+    ALTER TABLE tags ADD CONSTRAINT tags_color_check CHECK (color IS NULL OR color ~ '^#[0-9a-fA-F]{6}$');
+
+    CREATE TABLE IF NOT EXISTS manga_tags (
+      manga_id INTEGER NOT NULL REFERENCES manga(id) ON DELETE CASCADE,
+      tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+      PRIMARY KEY (manga_id, tag_id)
+    );
+
+    -- VVIP ranks above member (a "supporter" tier) but still below
+    -- uploader/admin — it grants no extra permissions on its own, it's just
+    -- a role a manga's visible_roles allow-list can target.
+    ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+    ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('member', 'vvip', 'uploader', 'admin'));
+
+    -- Uploader-controlled visibility. When is_private is true, the manga is
+    -- hidden from everyone except its uploader, admins, and any role listed
+    -- in manga_visible_roles (an uploader-curated exception list — e.g.
+    -- "let VVIP see this but not plain members", or the reverse).
+    ALTER TABLE manga ADD COLUMN IF NOT EXISTS is_private BOOLEAN NOT NULL DEFAULT false;
+
+    -- Admin "ban" override: when true, is_private is forced true and the
+    -- uploader's own visibility endpoint refuses to change it — only an
+    -- admin can lift this lock.
+    ALTER TABLE manga ADD COLUMN IF NOT EXISTS privacy_locked_by_admin BOOLEAN NOT NULL DEFAULT false;
+
+    CREATE TABLE IF NOT EXISTS manga_visible_roles (
+      manga_id INTEGER NOT NULL REFERENCES manga(id) ON DELETE CASCADE,
+      role TEXT NOT NULL CHECK (role IN ('member', 'vvip')),
+      PRIMARY KEY (manga_id, role)
+    );
   `);
 }
 

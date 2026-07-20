@@ -12,16 +12,23 @@ export default function MangaDetailPage() {
   const { user } = useAuth();
   const { t } = useLanguage();
   const [manga, setManga] = useState(null);
+  const [notFound, setNotFound] = useState(false);
   const [chapters, setChapters] = useState([]);
+  const [tags, setTags] = useState([]);
   const [activeTab, setActiveTab] = useState("chapters");
   const [coverLightboxOpen, setCoverLightboxOpen] = useState(false);
 
   useEffect(() => {
     setManga(null);
-    api.get(`/manga/${mangaId}`).then((data) => {
-      setManga(data);
-      setChapters(data.chapters);
-    });
+    setNotFound(false);
+    api
+      .get(`/manga/${mangaId}`)
+      .then((data) => {
+        setManga(data);
+        setChapters(data.chapters);
+        setTags(data.tags);
+      })
+      .catch(() => setNotFound(true));
   }, [mangaId]);
 
   useEffect(() => {
@@ -54,6 +61,7 @@ export default function MangaDetailPage() {
       onCommit: commitChapterOrder,
     });
 
+  if (notFound) return <div className="page-loading">{t("detail.notFound")}</div>;
   if (!manga) return <div className="page-loading">{t("common.loading")}</div>;
 
   const handleDeleteChapter = async (chapterId) => {
@@ -158,6 +166,18 @@ export default function MangaDetailPage() {
         )}
         <div className="manga-hero-info">
           <h1 dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(manga.title) }} />
+          {manga.is_private && (
+            <span
+              className={`role-badge manga-private-indicator${
+                manga.privacy_locked_by_admin ? " manga-private-indicator-admin" : ""
+              }`}
+            >
+              <span className="material-symbols-outlined" aria-hidden="true">
+                lock
+              </span>
+              {manga.privacy_locked_by_admin ? t("detail.privateByAdminIndicator") : t("detail.privateIndicator")}
+            </span>
+          )}
           <Link to={`/users/${manga.uploader_id}`} className="manga-uploader-credit">
             {t("detail.by")}
             {manga.uploader_avatar_path ? (
@@ -173,6 +193,21 @@ export default function MangaDetailPage() {
               dangerouslySetInnerHTML={{ __html: renderMarkdown(manga.description) }}
             />
           )}
+
+          {tags.length > 0 && (
+            <div className="manga-tags">
+              {tags.map((tg) => (
+                <Link
+                  key={tg.id}
+                  to={`/tags/${tg.id}`}
+                  className={`tag-chip tag-chip-link${tg.color ? " tag-chip-link-custom" : ""}`}
+                  style={tg.color ? { background: tg.color, color: "#fff" } : undefined}
+                  dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(tg.name) }}
+                />
+              ))}
+            </div>
+          )}
+
           <div className="manga-hero-actions">
             {isOwner && (
               <Link to={`/manga/${manga.id}/upload-chapter`} className="btn btn-accent">

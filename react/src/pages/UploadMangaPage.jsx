@@ -45,7 +45,7 @@ export default function UploadMangaPage() {
 
   return (
     <div className="page">
-      <form className="upload-form" onSubmit={handleSubmit}>
+      <form className="upload-form manga-form" onSubmit={handleSubmit}>
         <h1>{t("uploadManga.title")}</h1>
 
         <label>

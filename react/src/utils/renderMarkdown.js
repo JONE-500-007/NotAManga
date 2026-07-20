@@ -15,3 +15,14 @@ export function renderInlineMarkdown(text) {
   if (!text) return "";
   return DOMPurify.sanitize(marked.parseInline(text));
 }
+
+// For plain-text contexts that can't render HTML (dropdown option lists,
+// <option> elements) — strips markdown/HTML formatting down to the text a
+// reader would actually see, e.g. "**Bold**" or a color <span> both become
+// just their inner words.
+export function markdownToPlainText(text) {
+  if (!text) return "";
+  const div = document.createElement("div");
+  div.innerHTML = renderInlineMarkdown(text);
+  return div.textContent || "";
+}

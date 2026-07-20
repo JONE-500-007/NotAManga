@@ -2,6 +2,7 @@ const express = require("express");
 const pool = require("../db/pool");
 const { requireAuth, optionalAuth, requireRole } = require("../middleware/auth");
 const { reorderRows } = require("../utils/reorder");
+const { visibilityFilter } = require("../utils/mangaVisibility");
 
 const router = express.Router();
 const CARD_SIZES = ["xs", "small", "medium", "large", "xl"];
@@ -11,13 +12,14 @@ router.get("/categories", optionalAuth, async (req, res) => {
     "SELECT id, title, description, position, card_size FROM categories ORDER BY position ASC"
   );
   const categories = categoriesResult.rows;
+  const visibility = visibilityFilter(req.user, 2);
 
   for (const category of categories) {
     const mangaResult = await pool.query(
-      `SELECT m.id, m.title, m.cover_path FROM category_manga cm
+      `SELECT m.id, m.title, m.cover_path, m.is_private FROM category_manga cm
        JOIN manga m ON m.id = cm.manga_id
-       WHERE cm.category_id = $1 ORDER BY cm.position ASC`,
-      [category.id]
+       WHERE cm.category_id = $1 AND ${visibility.clause} ORDER BY cm.position ASC`,
+      [category.id, ...visibility.params]
     );
     category.manga = mangaResult.rows;
   }

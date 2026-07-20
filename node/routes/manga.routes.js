@@ -8,15 +8,26 @@ const { savePageFiles } = require("../utils/pageStorage");
 const { reorderRows } = require("../utils/reorder");
 const { deleteUploadedFile } = require("../utils/fileStorage");
 const { DEFAULT_AVATAR_PATH } = require("../middleware/upload");
+const { visibilityFilter, canViewManga } = require("../utils/mangaVisibility");
 
 const router = express.Router();
 
 router.get("/manga", optionalAuth, async (req, res) => {
   // Pinned manga (admin-ordered) float to the front in the order the admin
-  // set; everything else keeps the normal auto sort by upload date.
+  // set; everything else keeps the normal auto sort by upload date. Tags
+  // are included so the browse page can search by tag name, not just title.
+  const visibility = visibilityFilter(req.user, 1);
   const result = await pool.query(
-    `SELECT id, title, cover_path, pinned_position FROM manga
-     ORDER BY pinned_position IS NULL ASC, pinned_position ASC, created_at DESC`
+    `SELECT m.id, m.title, m.cover_path, m.pinned_position, m.is_private,
+            COALESCE(
+              (SELECT json_agg(json_build_object('id', t.id, 'name', t.name) ORDER BY t.name)
+               FROM manga_tags mt JOIN tags t ON t.id = mt.tag_id WHERE mt.manga_id = m.id),
+              '[]'
+            ) AS tags
+     FROM manga m
+     WHERE ${visibility.clause}
+     ORDER BY m.pinned_position IS NULL ASC, m.pinned_position ASC, m.created_at DESC`,
+    visibility.params
   );
   res.json(result.rows);
 });
@@ -103,12 +114,123 @@ router.get("/manga/:mangaId", optionalAuth, async (req, res) => {
   const manga = mangaResult.rows[0];
   if (!manga) return res.status(404).json({ error: "Manga not found" });
 
+  const visibleRolesResult = await pool.query(
+    "SELECT role FROM manga_visible_roles WHERE manga_id = $1",
+    [mangaId]
+  );
+  const visibleRoles = visibleRolesResult.rows.map((r) => r.role);
+  if (!canViewManga(req.user, manga, visibleRoles)) {
+    return res.status(404).json({ error: "Manga not found" });
+  }
+
   const chaptersResult = await pool.query(
     "SELECT id, chapter_number, volume, title, created_at FROM chapters WHERE manga_id = $1 ORDER BY chapter_number ASC",
     [mangaId]
   );
-  res.json({ ...manga, chapters: chaptersResult.rows });
+  const tagsResult = await pool.query(
+    `SELECT t.id, t.name, t.color FROM manga_tags mt
+     JOIN tags t ON t.id = mt.tag_id
+     WHERE mt.manga_id = $1 ORDER BY t.name ASC`,
+    [mangaId]
+  );
+  res.json({ ...manga, chapters: chaptersResult.rows, tags: tagsResult.rows, visible_roles: visibleRoles });
 });
+
+router.patch(
+  "/manga/:mangaId/visibility",
+  requireAuth,
+  requireRole("uploader", "admin"),
+  requireMangaOwner,
+  async (req, res) => {
+    const { mangaId } = req.params;
+    const { is_private, visible_roles } = req.body;
+    if (typeof is_private !== "boolean") return res.status(400).json({ error: "is_private is required" });
+
+    const roles = Array.isArray(visible_roles) ? visible_roles.filter((r) => ["member", "vvip"].includes(r)) : [];
+
+    const lockCheck = await pool.query("SELECT privacy_locked_by_admin FROM manga WHERE id = $1", [mangaId]);
+    if (lockCheck.rows[0]?.privacy_locked_by_admin && req.user.role !== "admin") {
+      return res.status(403).json({ error: "This manga was made private by an admin and can't be changed" });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const result = await client.query("UPDATE manga SET is_private = $1 WHERE id = $2 RETURNING *", [
+        is_private,
+        mangaId,
+      ]);
+      await client.query("DELETE FROM manga_visible_roles WHERE manga_id = $1", [mangaId]);
+      if (is_private && roles.length > 0) {
+        for (const role of roles) {
+          await client.query("INSERT INTO manga_visible_roles (manga_id, role) VALUES ($1, $2)", [mangaId, role]);
+        }
+      }
+      await client.query("COMMIT");
+      res.json({ ...result.rows[0], visible_roles: is_private ? roles : [] });
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+);
+
+router.patch("/manga/:mangaId/admin-lock", requireAuth, requireRole("admin"), async (req, res) => {
+  const { mangaId } = req.params;
+  const { locked } = req.body;
+  if (typeof locked !== "boolean") return res.status(400).json({ error: "locked is required" });
+
+  const result = await pool.query(
+    locked
+      ? "UPDATE manga SET privacy_locked_by_admin = true, is_private = true WHERE id = $1 RETURNING *"
+      : "UPDATE manga SET privacy_locked_by_admin = false WHERE id = $1 RETURNING *",
+    [mangaId]
+  );
+  if (result.rows.length === 0) return res.status(404).json({ error: "Manga not found" });
+  res.json(result.rows[0]);
+});
+
+router.post(
+  "/manga/:mangaId/tags",
+  requireAuth,
+  requireRole("uploader", "admin"),
+  requireMangaOwner,
+  async (req, res) => {
+    const { mangaId } = req.params;
+    const { tagId } = req.body;
+    if (!tagId) return res.status(400).json({ error: "tagId is required" });
+
+    const tagCheck = await pool.query("SELECT id, name, color FROM tags WHERE id = $1", [tagId]);
+    if (tagCheck.rows.length === 0) return res.status(404).json({ error: "Tag not found" });
+
+    try {
+      await pool.query("INSERT INTO manga_tags (manga_id, tag_id) VALUES ($1, $2)", [mangaId, tagId]);
+    } catch (err) {
+      if (err.code === "23505") return res.status(409).json({ error: "Tag is already on this manga" });
+      throw err;
+    }
+
+    res.status(201).json(tagCheck.rows[0]);
+  }
+);
+
+router.delete(
+  "/manga/:mangaId/tags/:tagId",
+  requireAuth,
+  requireRole("uploader", "admin"),
+  requireMangaOwner,
+  async (req, res) => {
+    const { mangaId, tagId } = req.params;
+    const result = await pool.query(
+      "DELETE FROM manga_tags WHERE manga_id = $1 AND tag_id = $2 RETURNING tag_id",
+      [mangaId, tagId]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: "Tag is not on this manga" });
+    res.json({ ok: true });
+  }
+);
 
 router.patch(
   "/manga/:mangaId",

@@ -18,6 +18,8 @@ import UploadChapterPage from "./pages/UploadChapterPage";
 import EditMangaPage from "./pages/EditMangaPage";
 import EditChapterPage from "./pages/EditChapterPage";
 import AdminCategoriesPage from "./pages/AdminCategoriesPage";
+import AdminTagsPage from "./pages/AdminTagsPage";
+import TagMangaPage from "./pages/TagMangaPage";
 import ProfilePage from "./pages/ProfilePage";
 import "./App.css";
 
@@ -69,6 +71,7 @@ function App() {
             <Route element={<Layout />}>
               <Route path="/" element={<BrowsePage />} />
               <Route path="/manga/:mangaId" element={<MangaDetailPage />} />
+              <Route path="/tags/:tagId" element={<TagMangaPage />} />
               <Route path="/users/:userId" element={<ProfilePage />} />
 
               <Route element={<ProtectedRoute />}>
@@ -84,6 +87,7 @@ function App() {
 
               <Route element={<AdminRoute />}>
                 <Route path="/admin/categories" element={<AdminCategoriesPage />} />
+                <Route path="/admin/tags" element={<AdminTagsPage />} />
               </Route>
             </Route>
 

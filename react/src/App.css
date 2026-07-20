@@ -45,6 +45,64 @@
   gap: 14px;
 }
 
+.admin-menu {
+  position: relative;
+}
+
+.admin-menu-chevron {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 10px;
+  transition: transform 0.15s ease;
+}
+
+.admin-menu-chevron.open {
+  transform: rotate(180deg);
+}
+
+.admin-menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 160px;
+  z-index: 30;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  gap: 2px;
+}
+
+.admin-menu-item {
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: var(--text-h);
+  font-size: 14px;
+  transition: background 0.15s;
+}
+
+.admin-menu-item:hover {
+  background: var(--surface-alt);
+}
+
+.mobile-menu-admin-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mobile-menu-admin-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0 4px;
+}
+
 /* Unlike .navbar-actions-desktop, this stays visible at every width — a
    logged-out visitor has no hamburger/drawer to fall back on, so hiding it
    below the mobile breakpoint would leave no way to sign in at all. */
@@ -141,6 +199,24 @@
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
+}
+
+.manga-private-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: -4px;
+  padding: 6px 14px;
+  font-size: 14px;
+}
+
+.manga-private-indicator .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.manga-private-indicator-admin {
+  background: rgba(255, 84, 112, 0.12);
+  color: var(--danger);
 }
 
 /* Mobile hamburger menu */
@@ -402,9 +478,25 @@
 }
 
 .manga-card-cover {
+  position: relative;
   aspect-ratio: 2 / 3;
   background: var(--surface-alt);
   overflow: hidden;
+}
+
+.manga-card-private-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(20, 21, 26, 0.75);
+  color: var(--text-h);
+  font-size: 16px;
 }
 
 .manga-card-cover img {
@@ -662,6 +754,79 @@
   margin-bottom: 0;
 }
 
+.manga-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tag-chip-link {
+  transition: background 0.15s, color 0.15s, filter 0.15s;
+}
+
+.tag-chip-link:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+/* A custom chip color is set inline, which always wins over the background/
+   color hover rule above — filter isn't set inline, so it's the only way to
+   give a custom-colored chip its own hover feedback (lighten/darken in
+   place instead of flipping to the accent color). */
+.tag-chip-link.tag-chip-link-custom:hover {
+  filter: brightness(1.4);
+}
+
+.tag-chip-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tag-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tag-chip-remove:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.manga-tags-add {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 320px;
+}
+
+.tag-manga-page h1 {
+  margin-top: 16px;
+}
+
 @media (max-width: 640px) {
   .manga-hero {
     flex-direction: column;
@@ -846,6 +1011,10 @@
 .upload-form {
   max-width: 520px;
   margin: 0 auto;
+}
+
+.upload-form.manga-form {
+  max-width: 700px;
 }
 
 .auth-card h1,
@@ -1509,6 +1678,95 @@ input[type="file"]::file-selector-button:hover {
   font-weight: 600;
 }
 
+.visibility-roles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.visibility-roles-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  width: 100%;
+}
+
+.visibility-role-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.visibility-role-checkbox input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  margin: 0;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.visibility-role-checkbox input[type="checkbox"]:hover {
+  border-color: var(--accent);
+}
+
+.visibility-role-checkbox input[type="checkbox"]:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.visibility-role-checkbox input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  /* top/left: 50% + translate(-50%, -50%) self-centers on the box's own
+     rendered size instead of a hand-measured px offset, so it stays
+     centered even if the box doesn't end up exactly the declared 22px
+     (checkbox intrinsic sizing varies a bit by browser). */
+  top: 50%;
+  left: 50%;
+  width: 7px;
+  height: 13px;
+  border: solid #14151a;
+  border-width: 0 3px 3px 0;
+  transform: translate(-50%, -60%) rotate(45deg) scale(0);
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.visibility-role-checkbox input[type="checkbox"]:checked::after {
+  transform: translate(-50%, -60%) rotate(45deg) scale(1);
+}
+
+.visibility-role-checkbox-disabled {
+  cursor: not-allowed;
+}
+
+.visibility-role-checkbox-disabled input[type="checkbox"] {
+  cursor: not-allowed;
+}
+
+.visibility-role-checkbox-disabled input[type="checkbox"]:hover {
+  border-color: var(--border);
+}
+
+.visibility-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .zoom-control {
   display: flex;
   align-items: center;
@@ -1915,6 +2173,61 @@ textarea.markdown-field {
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+.tag-search-input {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  margin: 32px 0 16px;
+}
+
+.tag-manage-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tag-manage-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  flex-wrap: wrap;
+}
+
+.tag-manage-edit-input {
+  flex: 1;
+  min-width: 160px;
+}
+
+.tag-color-row {
+  display: flex;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 12px;
+}
+
+.tag-color-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tag-color-picker input[type="color"] {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
 }
 
 .category-list-item.category-list-item-dragging {
@@ -2383,6 +2696,39 @@ textarea.markdown-field {
   align-items: center;
   gap: 10px;
   margin-bottom: 16px;
+}
+
+.profile-role-select {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.profile-role-select select {
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--surface-alt);
+  color: var(--text-h);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 30px 6px 12px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.profile-role-select select:hover {
+  border-color: var(--accent);
+}
+
+.profile-role-select select:focus {
+  outline: none;
+  border-color: var(--accent);
 }
 
 .profile-header-info h1 {

@@ -22,7 +22,13 @@ export default function BrowsePage() {
   const shelves = categories.filter((c) => c.manga.length > 0);
   const trimmedQuery = searchQuery.trim().toLowerCase();
   const isSearching = trimmedQuery.length > 0;
-  const searchResults = isSearching ? manga.filter((m) => m.title.toLowerCase().includes(trimmedQuery)) : [];
+  const searchResults = isSearching
+    ? manga.filter(
+        (m) =>
+          m.title.toLowerCase().includes(trimmedQuery) ||
+          (m.tags || []).some((tg) => tg.name.toLowerCase().includes(trimmedQuery))
+      )
+    : [];
 
   return (
     <div className="page browse-page">

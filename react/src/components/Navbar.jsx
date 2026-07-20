@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
@@ -8,8 +8,19 @@ export default function Navbar() {
   const { lang, setLang, t } = useLanguage();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [adminMenuOpen, setAdminMenuOpen] = useState(false);
+  const adminMenuRef = useRef(null);
 
   const closeMenu = () => setMenuOpen(false);
+
+  useEffect(() => {
+    if (!adminMenuOpen) return;
+    const handleClickOutside = (e) => {
+      if (adminMenuRef.current && !adminMenuRef.current.contains(e.target)) setAdminMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [adminMenuOpen]);
 
   const handleLogout = async () => {
     closeMenu();
@@ -46,9 +57,27 @@ export default function Navbar() {
               </Link>
             )}
             {user.role === "admin" && (
-              <Link to="/admin/categories" className="btn btn-ghost">
-                {t("nav.admin")}
-              </Link>
+              <div className="admin-menu" ref={adminMenuRef}>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setAdminMenuOpen((open) => !open)}
+                  aria-expanded={adminMenuOpen}
+                >
+                  {t("nav.admin")}
+                  <span className={`admin-menu-chevron${adminMenuOpen ? " open" : ""}`}>&#9662;</span>
+                </button>
+                {adminMenuOpen && (
+                  <div className="admin-menu-panel">
+                    <Link to="/admin/categories" className="admin-menu-item" onClick={() => setAdminMenuOpen(false)}>
+                      {t("nav.adminCategories")}
+                    </Link>
+                    <Link to="/admin/tags" className="admin-menu-item" onClick={() => setAdminMenuOpen(false)}>
+                      {t("nav.adminTags")}
+                    </Link>
+                  </div>
+                )}
+              </div>
             )}
             <Link to="/profile" className="navbar-user">
               {user.avatar_path ? (
@@ -118,9 +147,15 @@ export default function Navbar() {
                   </Link>
                 )}
                 {user.role === "admin" && (
-                  <Link to="/admin/categories" className="btn btn-ghost" onClick={closeMenu}>
-                    {t("nav.admin")}
-                  </Link>
+                  <div className="mobile-menu-admin-group">
+                    <span className="mobile-menu-admin-label">{t("nav.admin")}</span>
+                    <Link to="/admin/categories" className="btn btn-ghost" onClick={closeMenu}>
+                      {t("nav.adminCategories")}
+                    </Link>
+                    <Link to="/admin/tags" className="btn btn-ghost" onClick={closeMenu}>
+                      {t("nav.adminTags")}
+                    </Link>
+                  </div>
                 )}
                 <button className="btn btn-ghost" onClick={handleLogout}>
                   {t("nav.logout")}
