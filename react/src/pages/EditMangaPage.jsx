@@ -157,7 +157,7 @@ export default function EditMangaPage() {
   return (
     <div className="page">
       <form className="upload-form manga-form" onSubmit={handleSubmit}>
-        <h1>{t("editManga.title")}</h1>
+        <h1>{manga.work_type === "novel" ? t("editManga.titleNovel") : t("editManga.title")}</h1>
 
         <label>
           {t("uploadManga.titleLabel")}
@@ -177,17 +177,27 @@ export default function EditMangaPage() {
           <MarkdownEditor value={description} onChange={setDescription} />
         </label>
 
-        <div className="settings-row">
-          <span className="settings-label">{t("uploadManga.format")}</span>
-          <div className="settings-toggle-group">
-            <button type="button" className={format === "manga" ? "active" : ""} onClick={() => setFormat("manga")}>
-              {t("uploadManga.formatManga")}
-            </button>
-            <button type="button" className={format === "comic" ? "active" : ""} onClick={() => setFormat("comic")}>
-              {t("uploadManga.formatComic")}
-            </button>
+        {manga.work_type !== "novel" && (
+          <div className="settings-row">
+            <span className="settings-label">{t("uploadManga.format")}</span>
+            <div className="settings-toggle-group">
+              <button
+                type="button"
+                className={format === "manga" ? "active" : ""}
+                onClick={() => setFormat("manga")}
+              >
+                {t("uploadManga.formatManga")}
+              </button>
+              <button
+                type="button"
+                className={format === "comic" ? "active" : ""}
+                onClick={() => setFormat("comic")}
+              >
+                {t("uploadManga.formatComic")}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="settings-row">
           <span className="settings-label">{t("editManga.visibility")}</span>

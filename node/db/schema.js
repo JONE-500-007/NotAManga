@@ -162,6 +162,30 @@ async function initSchema(pool) {
       role TEXT NOT NULL CHECK (role IN ('member', 'vvip')),
       PRIMARY KEY (manga_id, role)
     );
+
+    -- Distinguishes a page-image work (manga/comic — chapters are a
+    -- sequence of page images) from a text work (light novel — chapters are
+    -- an ordered sequence of text/image blocks, see novel_blocks below).
+    -- Independent of "format" (manga/comic reading direction), which only
+    -- applies to work_type = 'manga'.
+    ALTER TABLE manga ADD COLUMN IF NOT EXISTS work_type TEXT NOT NULL DEFAULT 'manga';
+    ALTER TABLE manga DROP CONSTRAINT IF EXISTS manga_work_type_check;
+    ALTER TABLE manga ADD CONSTRAINT manga_work_type_check CHECK (work_type IN ('manga', 'novel'));
+
+    -- A light novel chapter's content: an ordered mix of markdown text
+    -- blocks and standalone image blocks, e.g. text, image, text, text,
+    -- image — reusing the same "chapters" table (numbering/volume/title)
+    -- as manga, just with a different content model per row here instead
+    -- of the "pages" table.
+    CREATE TABLE IF NOT EXISTS novel_blocks (
+      id SERIAL PRIMARY KEY,
+      chapter_id INTEGER NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+      position INTEGER NOT NULL,
+      block_type TEXT NOT NULL CHECK (block_type IN ('text', 'image')),
+      content TEXT,
+      image_path TEXT,
+      UNIQUE (chapter_id, position)
+    );
   `);
 }
 

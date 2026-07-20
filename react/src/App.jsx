@@ -12,11 +12,13 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
 import BrowsePage from "./pages/BrowsePage";
 import MangaDetailPage from "./pages/MangaDetailPage";
-import ReaderPage from "./pages/ReaderPage";
+import ChapterReaderRouter from "./pages/ChapterReaderRouter";
+import UploadWorkTypePage from "./pages/UploadWorkTypePage";
 import UploadMangaPage from "./pages/UploadMangaPage";
-import UploadChapterPage from "./pages/UploadChapterPage";
+import UploadNovelPage from "./pages/UploadNovelPage";
+import UploadChapterRouter from "./pages/UploadChapterRouter";
 import EditMangaPage from "./pages/EditMangaPage";
-import EditChapterPage from "./pages/EditChapterPage";
+import EditChapterRouter from "./pages/EditChapterRouter";
 import AdminCategoriesPage from "./pages/AdminCategoriesPage";
 import AdminTagsPage from "./pages/AdminTagsPage";
 import TagMangaPage from "./pages/TagMangaPage";
@@ -56,7 +58,7 @@ function App() {
               back in <ProtectedRoute> the way it used to be:
 
                 <Route element={<ProtectedRoute />}>
-                  <Route path="/manga/:mangaId/chapter/:chapterId" element={<ReaderPage />} />
+                  <Route path="/manga/:mangaId/chapter/:chapterId" element={<ChapterReaderRouter />} />
                   <Route element={<Layout />}>
                     <Route path="/" element={<BrowsePage />} />
                     <Route path="/manga/:mangaId" element={<MangaDetailPage />} />
@@ -67,7 +69,7 @@ function App() {
 
               and delete the unguarded copies below.
             */}
-            <Route path="/manga/:mangaId/chapter/:chapterId" element={<ReaderPage />} />
+            <Route path="/manga/:mangaId/chapter/:chapterId" element={<ChapterReaderRouter />} />
             <Route element={<Layout />}>
               <Route path="/" element={<BrowsePage />} />
               <Route path="/manga/:mangaId" element={<MangaDetailPage />} />
@@ -79,10 +81,12 @@ function App() {
               </Route>
 
               <Route element={<UploaderRoute />}>
+                <Route path="/upload" element={<UploadWorkTypePage />} />
                 <Route path="/upload/manga" element={<UploadMangaPage />} />
-                <Route path="/manga/:mangaId/upload-chapter" element={<UploadChapterPage />} />
+                <Route path="/upload/novel" element={<UploadNovelPage />} />
+                <Route path="/manga/:mangaId/upload-chapter" element={<UploadChapterRouter />} />
                 <Route path="/manga/:mangaId/edit" element={<EditMangaPage />} />
-                <Route path="/manga/:mangaId/chapter/:chapterId/edit" element={<EditChapterPage />} />
+                <Route path="/manga/:mangaId/chapter/:chapterId/edit" element={<EditChapterRouter />} />
               </Route>
 
               <Route element={<AdminRoute />}>

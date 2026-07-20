@@ -9,12 +9,14 @@ const PAGES_DIR = path.join(UPLOADS_ROOT, "pages");
 const ART_DIR = path.join(UPLOADS_ROOT, "art");
 const AVATARS_DIR = path.join(UPLOADS_ROOT, "avatars");
 const BANNERS_DIR = path.join(UPLOADS_ROOT, "banners");
+const NOVEL_IMAGES_DIR = path.join(UPLOADS_ROOT, "novel-images");
 
 fs.mkdirSync(COVERS_DIR, { recursive: true });
 fs.mkdirSync(PAGES_DIR, { recursive: true });
 fs.mkdirSync(ART_DIR, { recursive: true });
 fs.mkdirSync(AVATARS_DIR, { recursive: true });
 fs.mkdirSync(BANNERS_DIR, { recursive: true });
+fs.mkdirSync(NOVEL_IMAGES_DIR, { recursive: true });
 
 // Shipped alongside the app (not user-uploaded), served by users who haven't
 // picked their own avatar/banner yet. Never pass these through
@@ -83,17 +85,31 @@ const bannerUpload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
 });
 
+const novelImageUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, NOVEL_IMAGES_DIR),
+    filename: (req, file, cb) => {
+      const safeName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+      cb(null, `${crypto.randomUUID()}-${safeName}`);
+    },
+  }),
+  fileFilter: imageFileFilter,
+  limits: { fileSize: 10 * 1024 * 1024, files: 100 },
+});
+
 module.exports = {
   coverUpload,
   chapterPagesUpload,
   artUpload,
   avatarUpload,
   bannerUpload,
+  novelImageUpload,
   COVERS_DIR,
   PAGES_DIR,
   ART_DIR,
   AVATARS_DIR,
   BANNERS_DIR,
+  NOVEL_IMAGES_DIR,
   UPLOADS_ROOT,
   DEFAULT_AVATAR_PATH,
   DEFAULT_BANNER_PATH,

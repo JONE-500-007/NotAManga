@@ -3,8 +3,9 @@ const fs = require("fs/promises");
 const path = require("path");
 const pool = require("../db/pool");
 const { requireAuth, optionalAuth, requireRole, requireMangaOwner } = require("../middleware/auth");
-const { coverUpload, chapterPagesUpload, artUpload, PAGES_DIR } = require("../middleware/upload");
+const { coverUpload, chapterPagesUpload, artUpload, novelImageUpload, PAGES_DIR } = require("../middleware/upload");
 const { savePageFiles } = require("../utils/pageStorage");
+const { saveNovelBlocks } = require("../utils/novelBlocks");
 const { reorderRows } = require("../utils/reorder");
 const { deleteUploadedFile } = require("../utils/fileStorage");
 const { DEFAULT_AVATAR_PATH } = require("../middleware/upload");
@@ -92,11 +93,12 @@ router.post("/manga", requireAuth, requireRole("uploader", "admin"), coverUpload
   const { title, description } = req.body;
   if (!title) return res.status(400).json({ error: "Title is required" });
 
+  const workType = req.body.work_type === "novel" ? "novel" : "manga";
   const format = req.body.format === "comic" ? "comic" : "manga";
   const coverPath = req.file ? `/uploads/covers/${req.file.filename}` : null;
   const result = await pool.query(
-    "INSERT INTO manga (title, description, cover_path, format, uploader_id) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-    [title, description || null, coverPath, format, req.user.id]
+    "INSERT INTO manga (title, description, cover_path, format, work_type, uploader_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+    [title, description || null, coverPath, format, workType, req.user.id]
   );
   res.status(201).json(result.rows[0]);
 });
@@ -264,6 +266,12 @@ router.delete("/manga/:mangaId", requireAuth, requireRole("uploader", "admin"), 
 
   const mangaResult = await pool.query("SELECT cover_path FROM manga WHERE id = $1", [mangaId]);
   const chaptersResult = await pool.query("SELECT id FROM chapters WHERE manga_id = $1", [mangaId]);
+  const novelImagesResult = await pool.query(
+    `SELECT nb.image_path FROM novel_blocks nb
+     JOIN chapters c ON c.id = nb.chapter_id
+     WHERE c.manga_id = $1 AND nb.block_type = 'image'`,
+    [mangaId]
+  );
 
   await deleteUploadedFile(mangaResult.rows[0]?.cover_path);
   await Promise.all(
@@ -271,6 +279,7 @@ router.delete("/manga/:mangaId", requireAuth, requireRole("uploader", "admin"), 
       fs.rm(path.join(PAGES_DIR, String(c.id)), { recursive: true, force: true }).catch(() => {})
     )
   );
+  await Promise.all(novelImagesResult.rows.map((r) => deleteUploadedFile(r.image_path)));
 
   await pool.query("DELETE FROM manga WHERE id = $1", [mangaId]);
   res.json({ ok: true });
@@ -317,6 +326,123 @@ router.post(
       if (chapterDir) {
         await fs.rm(chapterDir, { recursive: true, force: true }).catch(() => {});
       }
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+);
+
+router.post(
+  "/manga/:mangaId/novel-chapters",
+  requireAuth,
+  requireRole("uploader", "admin"),
+  requireMangaOwner,
+  novelImageUpload.array("images"),
+  async (req, res) => {
+    const { mangaId } = req.params;
+    const { chapter_number, title, volume } = req.body;
+    if (!chapter_number) return res.status(400).json({ error: "Chapter number is required" });
+
+    let blocks;
+    try {
+      blocks = JSON.parse(req.body.blocks || "[]");
+    } catch {
+      return res.status(400).json({ error: "Invalid blocks" });
+    }
+    if (!Array.isArray(blocks) || blocks.length === 0) {
+      return res.status(400).json({ error: "At least one block is required" });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      const mangaCheck = await client.query("SELECT id FROM manga WHERE id = $1", [mangaId]);
+      if (mangaCheck.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({ error: "Manga not found" });
+      }
+
+      const chapterResult = await client.query(
+        "INSERT INTO chapters (manga_id, chapter_number, title, volume) VALUES ($1, $2, $3, $4) RETURNING *",
+        [mangaId, chapter_number, title || null, volume || null]
+      );
+      const chapter = chapterResult.rows[0];
+
+      await saveNovelBlocks(client, { chapterId: chapter.id, blocks, files: req.files || [] });
+
+      await client.query("COMMIT");
+      res.status(201).json(chapter);
+    } catch (err) {
+      await client.query("ROLLBACK");
+      await Promise.all((req.files || []).map((f) => fs.unlink(f.path).catch(() => {})));
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+);
+
+router.patch(
+  "/manga/:mangaId/novel-chapters/:chapterId",
+  requireAuth,
+  requireRole("uploader", "admin"),
+  requireMangaOwner,
+  novelImageUpload.array("images"),
+  async (req, res) => {
+    const { mangaId, chapterId } = req.params;
+    const { chapter_number, title, volume } = req.body;
+    if (!chapter_number) return res.status(400).json({ error: "Chapter number is required" });
+
+    let blocks;
+    try {
+      blocks = JSON.parse(req.body.blocks || "[]");
+    } catch {
+      return res.status(400).json({ error: "Invalid blocks" });
+    }
+    if (!Array.isArray(blocks) || blocks.length === 0) {
+      return res.status(400).json({ error: "At least one block is required" });
+    }
+
+    const existingBlocksResult = await pool.query(
+      "SELECT image_path FROM novel_blocks WHERE chapter_id = $1 AND block_type = 'image'",
+      [chapterId]
+    );
+    const keptImagePaths = new Set(
+      blocks.filter((b) => b.type === "image" && b.existingPath).map((b) => b.existingPath)
+    );
+    const removedImagePaths = existingBlocksResult.rows
+      .map((r) => r.image_path)
+      .filter((p) => !keptImagePaths.has(p));
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      const chapterResult = await client.query(
+        "UPDATE chapters SET chapter_number = $1, title = $2, volume = $3 WHERE id = $4 AND manga_id = $5 RETURNING *",
+        [chapter_number, title || null, volume || null, chapterId, mangaId]
+      );
+      if (chapterResult.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({ error: "Chapter not found" });
+      }
+
+      await client.query("DELETE FROM novel_blocks WHERE chapter_id = $1", [chapterId]);
+      await saveNovelBlocks(client, { chapterId, blocks, files: req.files || [] });
+
+      await client.query("COMMIT");
+      await Promise.all(removedImagePaths.map((p) => deleteUploadedFile(p)));
+
+      const blocksResult = await pool.query(
+        "SELECT id, position, block_type, content, image_path FROM novel_blocks WHERE chapter_id = $1 ORDER BY position ASC",
+        [chapterId]
+      );
+      res.json({ ...chapterResult.rows[0], blocks: blocksResult.rows });
+    } catch (err) {
+      await client.query("ROLLBACK");
+      await Promise.all((req.files || []).map((f) => fs.unlink(f.path).catch(() => {})));
       throw err;
     } finally {
       client.release();
@@ -383,6 +509,10 @@ router.delete(
   requireMangaOwner,
   async (req, res) => {
     const { mangaId, chapterId } = req.params;
+    const novelImagesResult = await pool.query(
+      "SELECT image_path FROM novel_blocks WHERE chapter_id = $1 AND block_type = 'image'",
+      [chapterId]
+    );
     const result = await pool.query(
       "DELETE FROM chapters WHERE id = $1 AND manga_id = $2 RETURNING id",
       [chapterId, mangaId]
@@ -390,6 +520,7 @@ router.delete(
     if (result.rows.length === 0) return res.status(404).json({ error: "Chapter not found" });
 
     await fs.rm(path.join(PAGES_DIR, String(chapterId)), { recursive: true, force: true }).catch(() => {});
+    await Promise.all(novelImagesResult.rows.map((r) => deleteUploadedFile(r.image_path)));
     res.json({ ok: true });
   }
 );
@@ -397,17 +528,16 @@ router.delete(
 router.get("/manga/:mangaId/chapters/:chapterId", optionalAuth, async (req, res) => {
   const { mangaId, chapterId } = req.params;
 
+  const mangaResult = await pool.query("SELECT work_type FROM manga WHERE id = $1", [mangaId]);
+  if (mangaResult.rows.length === 0) return res.status(404).json({ error: "Manga not found" });
+  const { work_type: workType } = mangaResult.rows[0];
+
   const chapterResult = await pool.query(
     "SELECT * FROM chapters WHERE id = $1 AND manga_id = $2",
     [chapterId, mangaId]
   );
   const chapter = chapterResult.rows[0];
   if (!chapter) return res.status(404).json({ error: "Chapter not found" });
-
-  const pagesResult = await pool.query(
-    "SELECT id, page_number, image_path FROM pages WHERE chapter_id = $1 ORDER BY page_number ASC",
-    [chapterId]
-  );
 
   const siblingsResult = await pool.query(
     "SELECT id, chapter_number FROM chapters WHERE manga_id = $1 ORDER BY chapter_number ASC",
@@ -419,6 +549,18 @@ router.get("/manga/:mangaId/chapters/:chapterId", optionalAuth, async (req, res)
   const nextChapterId =
     currentIndex >= 0 && currentIndex < siblings.length - 1 ? siblings[currentIndex + 1].id : null;
 
+  if (workType === "novel") {
+    const blocksResult = await pool.query(
+      "SELECT id, position, block_type, content, image_path FROM novel_blocks WHERE chapter_id = $1 ORDER BY position ASC",
+      [chapterId]
+    );
+    return res.json({ ...chapter, blocks: blocksResult.rows, prevChapterId, nextChapterId });
+  }
+
+  const pagesResult = await pool.query(
+    "SELECT id, page_number, image_path FROM pages WHERE chapter_id = $1 ORDER BY page_number ASC",
+    [chapterId]
+  );
   res.json({ ...chapter, pages: pagesResult.rows, prevChapterId, nextChapterId });
 });
 

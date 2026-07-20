@@ -52,7 +52,7 @@ export default function Navbar() {
         {user ? (
           <div className="navbar-actions-desktop">
             {(user.role === "uploader" || user.role === "admin") && (
-              <Link to="/upload/manga" className="btn btn-accent">
+              <Link to="/upload" className="btn btn-accent">
                 {t("nav.uploadManga")}
               </Link>
             )}
@@ -142,7 +142,7 @@ export default function Navbar() {
                   </span>
                 </Link>
                 {(user.role === "uploader" || user.role === "admin") && (
-                  <Link to="/upload/manga" className="btn btn-accent" onClick={closeMenu}>
+                  <Link to="/upload" className="btn btn-accent" onClick={closeMenu}>
                     {t("nav.uploadManga")}
                   </Link>
                 )}

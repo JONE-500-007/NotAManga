@@ -1,6 +1,6 @@
 export default {
   "nav.browse": "Browse",
-  "nav.uploadManga": "+ Upload Manga",
+  "nav.uploadManga": "+ Upload Work",
   "nav.admin": "Admin",
   "nav.adminCategories": "Categories",
   "nav.adminTags": "Tags",
@@ -104,6 +104,12 @@ export default {
   "reader.zoomIn": "Zoom in",
   "reader.zoomOut": "Zoom out",
 
+  "uploadWork.title": "Upload New Work",
+  "uploadWork.manga": "Manga",
+  "uploadWork.mangaDesc": "A page-by-page comic or manga, read as scanned/drawn images.",
+  "uploadWork.novel": "Light Novel",
+  "uploadWork.novelDesc": "A text-based story, written with formatting and inline images.",
+
   "uploadManga.title": "Upload New Manga",
   "uploadManga.titleLabel": "Title",
   "uploadManga.description": "Description",
@@ -113,6 +119,9 @@ export default {
   "uploadManga.cover": "Cover image",
   "uploadManga.submit": "Create manga",
 
+  "uploadNovel.title": "Upload New Light Novel",
+  "uploadNovel.submit": "Create light novel",
+
   "uploadChapter.title": "Upload New Chapter",
   "uploadChapter.chapterNumber": "Chapter number",
   "uploadChapter.volume": "Volume (optional)",
@@ -120,7 +129,19 @@ export default {
   "uploadChapter.pages": "Page images (select in reading order)",
   "uploadChapter.submit": "Upload chapter",
 
+  "uploadNovelChapter.content": "Content",
+  "uploadNovelChapter.addText": "+ Add text",
+  "uploadNovelChapter.addImage": "+ Add image",
+  "uploadNovelChapter.importTxt": "Import .txt file",
+  "uploadNovelChapter.removeBlock": "Remove",
+  "uploadNovelChapter.reorderHint": "Drag blocks or use the arrows to reorder",
+  "uploadNovelChapter.empty": "Add a text or image block to start writing.",
+  "uploadNovelChapter.draftRestored": "Restored your unsaved draft. Any images you'd added weren't restored — please re-add them if needed.",
+  "uploadNovelChapter.imageBlock": "Image",
+  "uploadNovelChapter.submit": "Upload chapter",
+
   "editManga.title": "Edit Manga",
+  "editManga.titleNovel": "Edit Light Novel",
   "editManga.visibility": "Visibility",
   "editManga.public": "Public",
   "editManga.private": "Private",
@@ -144,6 +165,19 @@ export default {
   "editChapter.uploadPages": "Upload pages",
   "editChapter.deletePage": "Delete page",
   "editChapter.deleteChapter": "Delete chapter",
+
+  "editNovelChapter.title": "Edit Chapter",
+  "editNovelChapter.submit": "Save changes",
+
+  "novelReader.back": "Back to details",
+  "novelReader.theme": "Reading theme",
+  "novelReader.themeDark": "Dark",
+  "novelReader.themeLight": "Light",
+  "novelReader.fontSize": "Font size",
+  "novelReader.fontSizeSmaller": "Smaller font",
+  "novelReader.fontSizeLarger": "Larger font",
+  "novelReader.fontFamily": "Font",
+  "novelReader.fontDefault": "Default",
 
   "detail.tabChapters": "Chapters",
   "detail.tabArt": "Art",
@@ -233,7 +267,6 @@ export default {
   "profile.verificationSent": "Verification email sent — check your inbox.",
   "profile.save": "Save changes",
   "profile.works": "Works",
-  "profile.changeRole": "Change role",
   "profile.worksEmpty": "No manga uploaded yet.",
 
   "cropper.title": "Crop image",

@@ -1,6 +1,6 @@
 export default {
   "nav.browse": "หน้าแรก",
-  "nav.uploadManga": "+ อัปโหลดการ์ตูน",
+  "nav.uploadManga": "+ อัปโหลดผลงาน",
   "nav.admin": "จัดการระบบ",
   "nav.adminCategories": "หมวดหมู่",
   "nav.adminTags": "แท็ก",
@@ -104,6 +104,12 @@ export default {
   "reader.zoomIn": "ซูมเข้า",
   "reader.zoomOut": "ซูมออก",
 
+  "uploadWork.title": "อัปโหลดผลงานใหม่",
+  "uploadWork.manga": "การ์ตูน/มังงะ",
+  "uploadWork.mangaDesc": "การ์ตูนหรือมังงะแบบอ่านทีละหน้าเป็นภาพ",
+  "uploadWork.novel": "นิยาย",
+  "uploadWork.novelDesc": "เรื่องราวแบบตัวหนังสือ เขียนพร้อมจัดรูปแบบและแทรกภาพได้",
+
   "uploadManga.title": "เพิ่มการ์ตูนเรื่องใหม่",
   "uploadManga.titleLabel": "ชื่อเรื่อง",
   "uploadManga.description": "เรื่องย่อ",
@@ -113,6 +119,9 @@ export default {
   "uploadManga.cover": "รูปปก",
   "uploadManga.submit": "สร้างเรื่อง",
 
+  "uploadNovel.title": "เพิ่มนิยายเรื่องใหม่",
+  "uploadNovel.submit": "สร้างนิยาย",
+
   "uploadChapter.title": "อัปโหลดตอนใหม่",
   "uploadChapter.chapterNumber": "ลำดับตอน",
   "uploadChapter.volume": "เล่มที่ (ไม่บังคับ)",
@@ -120,7 +129,19 @@ export default {
   "uploadChapter.pages": "รูปภาพแต่ละหน้า (เลือกตามลำดับการอ่าน)",
   "uploadChapter.submit": "อัปโหลดตอน",
 
+  "uploadNovelChapter.content": "เนื้อหา",
+  "uploadNovelChapter.addText": "+ เพิ่มข้อความ",
+  "uploadNovelChapter.addImage": "+ เพิ่มรูปภาพ",
+  "uploadNovelChapter.importTxt": "นำเข้าไฟล์ .txt",
+  "uploadNovelChapter.removeBlock": "ลบ",
+  "uploadNovelChapter.reorderHint": "ลากบล็อก หรือใช้ปุ่มลูกศรเพื่อจัดลำดับ",
+  "uploadNovelChapter.empty": "เพิ่มบล็อกข้อความหรือรูปภาพเพื่อเริ่มเขียน",
+  "uploadNovelChapter.draftRestored": "กู้คืนฉบับร่างที่ยังไม่ได้บันทึกแล้ว ส่วนรูปภาพที่เคยเพิ่มไว้จะไม่ถูกกู้คืน กรุณาเพิ่มใหม่หากต้องการ",
+  "uploadNovelChapter.imageBlock": "รูปภาพ",
+  "uploadNovelChapter.submit": "อัปโหลดตอน",
+
   "editManga.title": "แก้ไขข้อมูลเรื่อง",
+  "editManga.titleNovel": "แก้ไขข้อมูลนิยาย",
   "editManga.visibility": "การมองเห็น",
   "editManga.public": "สาธารณะ",
   "editManga.private": "ส่วนตัว",
@@ -144,6 +165,19 @@ export default {
   "editChapter.uploadPages": "อัปโหลดหน้าใหม่",
   "editChapter.deletePage": "ลบหน้านี้",
   "editChapter.deleteChapter": "ลบตอนนี้",
+
+  "editNovelChapter.title": "แก้ไขตอน",
+  "editNovelChapter.submit": "บันทึกการแก้ไข",
+
+  "novelReader.back": "กลับไปหน้ารายละเอียด",
+  "novelReader.theme": "ธีมตอนอ่าน",
+  "novelReader.themeDark": "โหมดมืด",
+  "novelReader.themeLight": "โหมดสว่าง",
+  "novelReader.fontSize": "ขนาดตัวอักษร",
+  "novelReader.fontSizeSmaller": "ลดขนาดตัวอักษร",
+  "novelReader.fontSizeLarger": "เพิ่มขนาดตัวอักษร",
+  "novelReader.fontFamily": "ฟอนต์",
+  "novelReader.fontDefault": "ค่าเริ่มต้น",
 
   "detail.tabChapters": "รายการตอน",
   "detail.tabArt": "ผลงานภาพ",
@@ -233,7 +267,6 @@ export default {
   "profile.verificationSent": "ส่งอีเมลยืนยันแล้ว กรุณาตรวจสอบกล่องจดหมายของคุณ",
   "profile.save": "บันทึกการเปลี่ยนแปลง",
   "profile.works": "ผลงาน",
-  "profile.changeRole": "เปลี่ยน role",
   "profile.worksEmpty": "ยังไม่มีการ์ตูนที่อัปโหลด",
 
   "cropper.title": "ครอปรูปภาพ",

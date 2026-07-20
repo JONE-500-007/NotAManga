@@ -623,6 +623,25 @@
   border-color: var(--accent);
 }
 
+.novel-font-select {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  background: var(--surface-alt);
+  color: var(--text-h);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.novel-font-select:hover,
+.novel-font-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 /* Manga detail */
 
 .manga-hero {
@@ -1017,6 +1036,52 @@
   max-width: 700px;
 }
 
+.upload-picker-page {
+  text-align: center;
+}
+
+.upload-type-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  max-width: 700px;
+  margin: 24px auto 0;
+}
+
+.upload-type-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 36px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.upload-type-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.upload-type-card .material-symbols-outlined {
+  font-size: 42px;
+  color: var(--accent);
+}
+
+.upload-type-card h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.upload-type-card p {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .auth-card h1,
 .upload-form h1 {
   text-align: center;
@@ -1248,6 +1313,66 @@ input[type="file"]::file-selector-button:hover {
 .page-manager {
   max-width: 720px;
   margin: 32px auto 0;
+}
+
+.novel-blocks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.novel-block {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.novel-block-dragging {
+  opacity: 0.5;
+}
+
+.novel-block-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.novel-block-type {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+}
+
+.novel-block-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.novel-block-image-preview {
+  max-width: 100%;
+  max-height: 400px;
+  border-radius: 6px;
+  object-fit: contain;
+  background: var(--bg);
+}
+
+.novel-block-add-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.novel-block-add-actions input[type="file"] {
+  display: none;
 }
 
 .page-thumb-grid {
@@ -1571,6 +1696,63 @@ input[type="file"]::file-selector-button:hover {
   flex-direction: column;
   align-items: center;
   gap: 16px;
+}
+
+/* Novel reader */
+
+.novel-reader-page {
+  min-height: 100svh;
+  background: var(--bg);
+  transition: background 0.15s;
+}
+
+/* Light mode is scoped to the novel reader itself (not the whole site) —
+   it's meant for reading in bright light, not a general theme switch.
+   Remapping the same custom properties every themed element already reads
+   (var(--surface), var(--border), var(--text), ...) reskins the topbar,
+   settings panel, dropdown, buttons and slider all at once, instead of
+   overriding each of their selectors by hand one at a time. */
+.novel-reader-theme-light {
+  --bg: #f7f4ee;
+  --surface: #fffdf8;
+  --surface-alt: #efe9db;
+  --border: #ddd4bf;
+  --text: #4a453c;
+  --text-muted: #7a7266;
+  --text-h: #2b2721;
+  background: var(--bg);
+}
+
+.novel-reader-content {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Compound selector (not just .novel-reader-text) so this outranks
+   .markdown-preview-content's own font-size — that class is combined onto
+   the same element to reuse its heading/paragraph spacing rules, but its
+   fixed 14px would otherwise win the cascade by source order alone. */
+.novel-reader-text.markdown-preview-content {
+  font-size: var(--novel-font-size, 17px);
+  font-family: var(--novel-font-family, inherit);
+  line-height: 1.9;
+  color: var(--text);
+}
+
+.novel-reader-image {
+  display: block;
+  max-width: 100%;
+  margin: 0 auto;
+  border-radius: 8px;
+}
+
+.novel-reader-nav-buttons {
+  display: flex;
+  gap: 12px;
 }
 
 /* Reader settings panel */
@@ -2696,39 +2878,6 @@ textarea.markdown-field {
   align-items: center;
   gap: 10px;
   margin-bottom: 16px;
-}
-
-.profile-role-select {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.profile-role-select select {
-  -webkit-appearance: none;
-  appearance: none;
-  background: var(--surface-alt);
-  color: var(--text-h);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px 30px 6px 12px;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.profile-role-select select:hover {
-  border-color: var(--accent);
-}
-
-.profile-role-select select:focus {
-  outline: none;
-  border-color: var(--accent);
 }
 
 .profile-header-info h1 {
