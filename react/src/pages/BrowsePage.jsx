@@ -3,6 +3,7 @@ import { api } from "../api/client";
 import { useLanguage } from "../context/LanguageContext";
 import { renderInlineMarkdown, renderMarkdown } from "../utils/renderMarkdown";
 import MangaCard from "../components/MangaCard";
+import ShelfScroll from "../components/ShelfScroll";
 
 export default function BrowsePage() {
   const { t } = useLanguage();
@@ -68,11 +69,11 @@ export default function BrowsePage() {
                   dangerouslySetInnerHTML={{ __html: renderMarkdown(category.description) }}
                 />
               )}
-              <div className={`shelf-scroll shelf-scroll--${category.card_size || "medium"}`}>
+              <ShelfScroll className={`shelf-scroll shelf-scroll--${category.card_size || "medium"}`}>
                 {category.manga.map((m) => (
                   <MangaCard key={m.id} manga={m} />
                 ))}
-              </div>
+              </ShelfScroll>
             </section>
           ))}
 

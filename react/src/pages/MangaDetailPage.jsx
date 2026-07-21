@@ -6,6 +6,8 @@ import { useLanguage } from "../context/LanguageContext";
 import { useDragReorder } from "../hooks/useDragReorder";
 import { renderInlineMarkdown, renderMarkdown } from "../utils/renderMarkdown";
 import ArtGallery from "../components/ArtGallery";
+import MangaRating from "../components/MangaRating";
+import AddToLibraryButton from "../components/AddToLibraryButton";
 
 export default function MangaDetailPage() {
   const { mangaId } = useParams();
@@ -187,6 +189,24 @@ export default function MangaDetailPage() {
             )}
             <span>{manga.uploader_display_name || manga.uploader_username}</span>
           </Link>
+
+          <div className="manga-stats">
+            <span className="manga-view-count">
+              <span className="material-symbols-outlined" aria-hidden="true">
+                visibility
+              </span>
+              {manga.view_count.toLocaleString()} {t("detail.views")}
+            </span>
+            <MangaRating
+              key={manga.id}
+              mangaId={manga.id}
+              canRate={!!user}
+              average={manga.rating_average}
+              count={manga.rating_count}
+              userRating={manga.user_rating}
+            />
+          </div>
+
           {manga.description && (
             <div
               className="manga-description"
@@ -218,6 +238,11 @@ export default function MangaDetailPage() {
               <Link to={`/manga/${manga.id}/edit`} className="btn btn-ghost">
                 {t("detail.edit")}
               </Link>
+            )}
+            {user ? (
+              <AddToLibraryButton mangaId={manga.id} />
+            ) : (
+              <span className="login-hint">{t("library.loginHint")}</span>
             )}
           </div>
         </div>

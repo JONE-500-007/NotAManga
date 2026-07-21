@@ -23,6 +23,8 @@ import AdminCategoriesPage from "./pages/AdminCategoriesPage";
 import AdminTagsPage from "./pages/AdminTagsPage";
 import TagMangaPage from "./pages/TagMangaPage";
 import ProfilePage from "./pages/ProfilePage";
+import MyLibraryPage from "./pages/MyLibraryPage";
+import LibraryListPage from "./pages/LibraryListPage";
 import "./App.css";
 
 function Layout() {
@@ -75,9 +77,11 @@ function App() {
               <Route path="/manga/:mangaId" element={<MangaDetailPage />} />
               <Route path="/tags/:tagId" element={<TagMangaPage />} />
               <Route path="/users/:userId" element={<ProfilePage />} />
+              <Route path="/library/:listId" element={<LibraryListPage />} />
 
               <Route element={<ProtectedRoute />}>
                 <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/library" element={<MyLibraryPage />} />
               </Route>
 
               <Route element={<UploaderRoute />}>

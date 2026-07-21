@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
+import { useDragReorder } from "../hooks/useDragReorder";
 import UploadProgressBar from "../components/UploadProgressBar";
 import MarkdownEditor from "../components/MarkdownEditor";
 import SelectedFilePreview from "../components/SelectedFilePreview";
@@ -41,6 +42,21 @@ export default function EditMangaPage() {
   const [privacyLocked, setPrivacyLocked] = useState(false);
   const [visibilitySaving, setVisibilitySaving] = useState(false);
   const [visibilityError, setVisibilityError] = useState("");
+
+  const {
+    draggingId: draggingTagId,
+    dragArmed: tagDragArmed,
+    armDrag: armTagDrag,
+    disarmDrag: disarmTagDrag,
+    handleDragStart: handleTagDragStart,
+    handleDragOver: handleTagDragOver,
+    handleDrop: handleTagDrop,
+    moveByOffset: moveTagByOffset,
+  } = useDragReorder({
+    items: tags,
+    setItems: setTags,
+    onCommit: (orderedTagIds) => api.patch(`/manga/${mangaId}/tags/reorder`, { orderedTagIds }),
+  });
 
   useEffect(() => {
     if (!lightboxOpen) return;
@@ -84,7 +100,7 @@ export default function EditMangaPage() {
     setTagError("");
     try {
       const added = await api.post(`/manga/${mangaId}/tags`, { tagId: Number(selectedTagId) });
-      setTags((current) => [...current, added].sort((a, b) => a.name.localeCompare(b.name)));
+      setTags((current) => [...current, added]);
       setSelectedTagId("");
     } catch (err) {
       setTagError(err.message);
@@ -273,15 +289,50 @@ export default function EditMangaPage() {
 
         <div className="settings-row">
           <span className="settings-label">{t("editManga.tags")}</span>
+          {tags.length > 1 && <p className="reorder-hint">{t("editManga.tagsReorderHint")}</p>}
           {tags.length > 0 && (
             <div className="manga-tags">
-              {tags.map((tg) => (
-                <span key={tg.id} className="tag-chip-wrap">
+              {tags.map((tg, tagIndex) => (
+                <span
+                  key={tg.id}
+                  className={`tag-chip-wrap${draggingTagId === tg.id ? " tag-chip-wrap-dragging" : ""}`}
+                  draggable={tagDragArmed}
+                  onDragStart={handleTagDragStart(tg.id)}
+                  onDragOver={handleTagDragOver(tg.id)}
+                  onDrop={handleTagDrop}
+                  onDragEnd={disarmTagDrag}
+                >
+                  <span
+                    className="drag-handle material-symbols-outlined"
+                    onMouseDown={armTagDrag}
+                    onMouseUp={disarmTagDrag}
+                    aria-hidden="true"
+                  >
+                    drag_indicator
+                  </span>
                   <span
                     className="tag-chip"
                     style={tg.color ? { background: tg.color, color: "#fff" } : undefined}
                     dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(tg.name) }}
                   />
+                  <button
+                    type="button"
+                    className="tag-chip-move"
+                    onClick={() => moveTagByOffset(tg.id, -1)}
+                    disabled={tagIndex === 0}
+                    aria-label={t("common.moveUp")}
+                  >
+                    &uarr;
+                  </button>
+                  <button
+                    type="button"
+                    className="tag-chip-move"
+                    onClick={() => moveTagByOffset(tg.id, 1)}
+                    disabled={tagIndex === tags.length - 1}
+                    aria-label={t("common.moveDown")}
+                  >
+                    &darr;
+                  </button>
                   <button
                     type="button"
                     className="tag-chip-remove"

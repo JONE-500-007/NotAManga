@@ -1,13 +1,14 @@
 const express = require("express");
 const pool = require("../db/pool");
 const { requireAuth, optionalAuth, requireRole } = require("../middleware/auth");
+const { reorderRows } = require("../utils/reorder");
 const { visibilityFilter } = require("../utils/mangaVisibility");
 
 const router = express.Router();
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
 router.get("/tags", optionalAuth, async (req, res) => {
-  const result = await pool.query("SELECT id, name, color FROM tags ORDER BY name ASC");
+  const result = await pool.query("SELECT id, name, color FROM tags ORDER BY position ASC");
   res.json(result.rows);
 });
 
@@ -33,14 +34,42 @@ router.post("/tags", requireAuth, requireRole("admin"), async (req, res) => {
   if (color && !HEX_COLOR.test(color)) return res.status(400).json({ error: "Invalid color" });
 
   try {
-    const result = await pool.query("INSERT INTO tags (name, color) VALUES ($1, $2) RETURNING *", [
+    const maxResult = await pool.query("SELECT COALESCE(MAX(position), 0) AS max FROM tags");
+    const position = Number(maxResult.rows[0].max) + 1;
+
+    const result = await pool.query("INSERT INTO tags (name, color, position) VALUES ($1, $2, $3) RETURNING *", [
       name.trim(),
       color || null,
+      position,
     ]);
     res.status(201).json(result.rows[0]);
   } catch (err) {
     if (err.code === "23505") return res.status(409).json({ error: "A tag with this name already exists" });
     throw err;
+  }
+});
+
+router.patch("/tags/reorder", requireAuth, requireRole("admin"), async (req, res) => {
+  const { orderedTagIds } = req.body;
+  if (!Array.isArray(orderedTagIds) || orderedTagIds.length === 0) {
+    return res.status(400).json({ error: "orderedTagIds is required" });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await reorderRows(client, {
+      table: "tags",
+      numberColumn: "position",
+      orderedIds: orderedTagIds,
+    });
+    await client.query("COMMIT");
+    res.json({ ok: true });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
   }
 });
 

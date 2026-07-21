@@ -21,7 +21,7 @@ router.get("/manga", optionalAuth, async (req, res) => {
   const result = await pool.query(
     `SELECT m.id, m.title, m.cover_path, m.pinned_position, m.is_private,
             COALESCE(
-              (SELECT json_agg(json_build_object('id', t.id, 'name', t.name) ORDER BY t.name)
+              (SELECT json_agg(json_build_object('id', t.id, 'name', t.name) ORDER BY mt.position)
                FROM manga_tags mt JOIN tags t ON t.id = mt.tag_id WHERE mt.manga_id = m.id),
               '[]'
             ) AS tags
@@ -132,10 +132,74 @@ router.get("/manga/:mangaId", optionalAuth, async (req, res) => {
   const tagsResult = await pool.query(
     `SELECT t.id, t.name, t.color FROM manga_tags mt
      JOIN tags t ON t.id = mt.tag_id
-     WHERE mt.manga_id = $1 ORDER BY t.name ASC`,
+     WHERE mt.manga_id = $1 ORDER BY mt.position ASC`,
     [mangaId]
   );
-  res.json({ ...manga, chapters: chaptersResult.rows, tags: tagsResult.rows, visible_roles: visibleRoles });
+
+  const ratingResult = await pool.query(
+    "SELECT COALESCE(AVG(rating), 0) AS average, COUNT(*) AS count FROM manga_ratings WHERE manga_id = $1",
+    [mangaId]
+  );
+  let userRating = null;
+  if (req.user) {
+    const userRatingResult = await pool.query(
+      "SELECT rating FROM manga_ratings WHERE manga_id = $1 AND user_id = $2",
+      [mangaId, req.user.id]
+    );
+    userRating = userRatingResult.rows[0]?.rating ?? null;
+  }
+
+  res.json({
+    ...manga,
+    chapters: chaptersResult.rows,
+    tags: tagsResult.rows,
+    visible_roles: visibleRoles,
+    rating_average: Number(ratingResult.rows[0].average),
+    rating_count: Number(ratingResult.rows[0].count),
+    user_rating: userRating,
+  });
+});
+
+router.patch("/manga/:mangaId/rating", requireAuth, async (req, res) => {
+  const { mangaId } = req.params;
+  const { rating } = req.body;
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    return res.status(400).json({ error: "Rating must be an integer from 1 to 5" });
+  }
+
+  const mangaCheck = await pool.query("SELECT id FROM manga WHERE id = $1", [mangaId]);
+  if (mangaCheck.rows.length === 0) return res.status(404).json({ error: "Manga not found" });
+
+  await pool.query(
+    `INSERT INTO manga_ratings (manga_id, user_id, rating) VALUES ($1, $2, $3)
+     ON CONFLICT (manga_id, user_id) DO UPDATE SET rating = EXCLUDED.rating`,
+    [mangaId, req.user.id, rating]
+  );
+
+  const ratingResult = await pool.query(
+    "SELECT COALESCE(AVG(rating), 0) AS average, COUNT(*) AS count FROM manga_ratings WHERE manga_id = $1",
+    [mangaId]
+  );
+  res.json({
+    user_rating: rating,
+    rating_average: Number(ratingResult.rows[0].average),
+    rating_count: Number(ratingResult.rows[0].count),
+  });
+});
+
+router.delete("/manga/:mangaId/rating", requireAuth, async (req, res) => {
+  const { mangaId } = req.params;
+  await pool.query("DELETE FROM manga_ratings WHERE manga_id = $1 AND user_id = $2", [mangaId, req.user.id]);
+
+  const ratingResult = await pool.query(
+    "SELECT COALESCE(AVG(rating), 0) AS average, COUNT(*) AS count FROM manga_ratings WHERE manga_id = $1",
+    [mangaId]
+  );
+  res.json({
+    user_rating: null,
+    rating_average: Number(ratingResult.rows[0].average),
+    rating_count: Number(ratingResult.rows[0].count),
+  });
 });
 
 router.patch(
@@ -207,14 +271,58 @@ router.post(
     const tagCheck = await pool.query("SELECT id, name, color FROM tags WHERE id = $1", [tagId]);
     if (tagCheck.rows.length === 0) return res.status(404).json({ error: "Tag not found" });
 
+    const maxResult = await pool.query(
+      "SELECT COALESCE(MAX(position), 0) AS max FROM manga_tags WHERE manga_id = $1",
+      [mangaId]
+    );
+    const position = Number(maxResult.rows[0].max) + 1;
+
     try {
-      await pool.query("INSERT INTO manga_tags (manga_id, tag_id) VALUES ($1, $2)", [mangaId, tagId]);
+      await pool.query("INSERT INTO manga_tags (manga_id, tag_id, position) VALUES ($1, $2, $3)", [
+        mangaId,
+        tagId,
+        position,
+      ]);
     } catch (err) {
       if (err.code === "23505") return res.status(409).json({ error: "Tag is already on this manga" });
       throw err;
     }
 
     res.status(201).json(tagCheck.rows[0]);
+  }
+);
+
+router.patch(
+  "/manga/:mangaId/tags/reorder",
+  requireAuth,
+  requireRole("uploader", "admin"),
+  requireMangaOwner,
+  async (req, res) => {
+    const { mangaId } = req.params;
+    const { orderedTagIds } = req.body;
+    if (!Array.isArray(orderedTagIds) || orderedTagIds.length === 0) {
+      return res.status(400).json({ error: "orderedTagIds is required" });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await reorderRows(client, {
+        table: "manga_tags",
+        numberColumn: "position",
+        parentColumn: "manga_id",
+        parentId: mangaId,
+        idColumn: "tag_id",
+        orderedIds: orderedTagIds,
+      });
+      await client.query("COMMIT");
+      res.json({ ok: true });
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
   }
 );
 
@@ -226,10 +334,17 @@ router.delete(
   async (req, res) => {
     const { mangaId, tagId } = req.params;
     const result = await pool.query(
-      "DELETE FROM manga_tags WHERE manga_id = $1 AND tag_id = $2 RETURNING tag_id",
+      "DELETE FROM manga_tags WHERE manga_id = $1 AND tag_id = $2 RETURNING position",
       [mangaId, tagId]
     );
-    if (result.rows.length === 0) return res.status(404).json({ error: "Tag is not on this manga" });
+    const deleted = result.rows[0];
+    if (!deleted) return res.status(404).json({ error: "Tag is not on this manga" });
+
+    await pool.query(
+      "UPDATE manga_tags SET position = position - 1 WHERE manga_id = $1 AND position > $2",
+      [mangaId, deleted.position]
+    );
+
     res.json({ ok: true });
   }
 );
@@ -528,9 +643,9 @@ router.delete(
 router.get("/manga/:mangaId/chapters/:chapterId", optionalAuth, async (req, res) => {
   const { mangaId, chapterId } = req.params;
 
-  const mangaResult = await pool.query("SELECT work_type FROM manga WHERE id = $1", [mangaId]);
+  const mangaResult = await pool.query("SELECT work_type, uploader_id FROM manga WHERE id = $1", [mangaId]);
   if (mangaResult.rows.length === 0) return res.status(404).json({ error: "Manga not found" });
-  const { work_type: workType } = mangaResult.rows[0];
+  const { work_type: workType, uploader_id: uploaderId } = mangaResult.rows[0];
 
   const chapterResult = await pool.query(
     "SELECT * FROM chapters WHERE id = $1 AND manga_id = $2",
@@ -538,6 +653,15 @@ router.get("/manga/:mangaId/chapters/:chapterId", optionalAuth, async (req, res)
   );
   const chapter = chapterResult.rows[0];
   if (!chapter) return res.status(404).json({ error: "Chapter not found" });
+
+  // Counts as a "view" of the manga overall, not of this one chapter —
+  // opening any chapter bumps the same total shown on the manga's page.
+  // The uploader/an admin fetching this same route to load the edit-chapter
+  // form (EditChapterPage/EditNovelChapterPage) shouldn't inflate it.
+  const isOwnerRequest = req.user && (req.user.id === uploaderId || req.user.role === "admin");
+  if (!isOwnerRequest) {
+    await pool.query("UPDATE manga SET view_count = view_count + 1 WHERE id = $1", [mangaId]);
+  }
 
   const siblingsResult = await pool.query(
     "SELECT id, chapter_number FROM chapters WHERE manga_id = $1 ORDER BY chapter_number ASC",

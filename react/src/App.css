@@ -78,6 +78,16 @@
 }
 
 .admin-menu-item {
+  /* This class started out only on <Link>s (no native chrome to reset). Now
+     that MangaRating's picker also uses it on <button>s, it needs its own
+     reset — otherwise a <button> renders with the browser's default gray
+     face/border instead of matching the flat menu-item look. */
+  display: block;
+  width: 100%;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
   padding: 8px 10px;
   border-radius: 6px;
   color: var(--text-h);
@@ -335,6 +345,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   padding: 10px 18px;
   border-radius: 6px;
   border: 1px solid transparent;
@@ -342,6 +353,10 @@
   font-weight: 500;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.btn .material-symbols-outlined {
+  font-size: 18px;
 }
 
 .btn:disabled {
@@ -553,6 +568,67 @@
   padding-top: 10px;
   padding-bottom: 8px;
   margin-top: -10px;
+  cursor: grab;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.shelf-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.shelf-scroll--dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.shelf-scroll-wrap {
+  position: relative;
+}
+
+.shelf-scroll-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: rgba(20, 21, 26, 0.75);
+  backdrop-filter: blur(4px);
+  color: var(--text-h);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%) scale(0.85);
+  transition: opacity 0.15s ease, transform 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.shelf-scroll-arrow .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.shelf-scroll-wrap:hover .shelf-scroll-arrow.is-visible,
+.shelf-scroll-arrow.is-visible:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%) scale(1);
+}
+
+.shelf-scroll-arrow:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.shelf-scroll-arrow--left {
+  left: 8px;
+}
+
+.shelf-scroll-arrow--right {
+  right: 8px;
 }
 
 .shelf-scroll > .manga-card {
@@ -758,6 +834,108 @@
   border: 1px solid var(--border);
 }
 
+.manga-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.manga-view-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.manga-view-count .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.manga-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.manga-rating-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-h);
+  font-weight: 600;
+}
+
+.manga-rating-summary .material-symbols-outlined {
+  font-size: 18px;
+  color: var(--accent);
+}
+
+.manga-rating-count {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.manga-rating-menu {
+  position: relative;
+}
+
+.manga-rating-panel {
+  min-width: 220px;
+}
+
+.manga-rating-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.manga-rating-item-stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+.manga-rating-item-stars .material-symbols-outlined {
+  font-size: 14px;
+  color: var(--border);
+}
+
+.manga-rating-item-stars .manga-rating-star-filled {
+  color: var(--accent);
+}
+
+.manga-rating-button-rated {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.manga-rating-item-active {
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.manga-rating-remove {
+  color: var(--danger);
+}
+
+.manga-rating-remove:hover {
+  background: var(--danger);
+  color: #14151a;
+}
+
+.login-hint {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 13px;
+}
+
 .manga-description {
   max-width: 100%;
   overflow-wrap: break-word;
@@ -812,6 +990,41 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  cursor: grab;
+  transition: opacity 0.15s;
+}
+
+.tag-chip-wrap .drag-handle {
+  font-size: 16px;
+}
+
+.tag-chip-wrap-dragging {
+  opacity: 0.5;
+}
+
+.tag-chip-move {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tag-chip-move:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.tag-chip-move:not(:disabled):hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .tag-chip-remove {
@@ -852,6 +1065,9 @@
   }
   .manga-hero-cover {
     width: 160px;
+  }
+  .manga-hero-actions {
+    flex-wrap: wrap;
   }
 }
 
@@ -2384,6 +2600,10 @@ textarea.markdown-field {
   flex-wrap: wrap;
 }
 
+.tag-manage-row-dragging {
+  opacity: 0.5;
+}
+
 .tag-manage-edit-input {
   flex: 1;
   min-width: 160px;
@@ -3017,4 +3237,177 @@ textarea.markdown-field {
   .cropper-canvas-area {
     height: min(50vh, 360px);
   }
+}
+
+.library-private-checkbox {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px;
+}
+
+.library-page .upload-form {
+  margin-bottom: 32px;
+}
+
+.library-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.library-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  color: inherit;
+  transition: border-color 0.15s;
+}
+
+.library-card:hover {
+  border-color: var(--accent);
+}
+
+.library-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.library-card-header h3 {
+  overflow-wrap: break-word;
+}
+
+.library-card-description {
+  color: var(--text-muted);
+  font-size: 14px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.library-card-count {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.library-card-preview {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.library-card-preview img,
+.library-card-preview-placeholder {
+  width: 64px;
+  aspect-ratio: 2 / 3;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.library-card-preview-placeholder {
+  background: linear-gradient(135deg, var(--surface-alt), var(--border));
+}
+
+.library-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.library-detail-owner {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.library-detail-actions {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0 24px;
+}
+
+.library-edit-form {
+  margin-bottom: 24px;
+}
+
+.library-edit-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.library-manga-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.library-manga-tile .btn {
+  width: 100%;
+}
+
+.manga-library-menu {
+  position: relative;
+}
+
+.manga-library-panel {
+  min-width: 220px;
+  max-width: 280px;
+}
+
+.manga-library-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.manga-library-item:hover {
+  background: var(--surface-alt);
+}
+
+.manga-library-status {
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 8px 10px;
+  margin: 0;
+}
+
+.manga-library-create-form {
+  display: flex;
+  gap: 6px;
+  padding: 6px 4px 2px;
+}
+
+.manga-library-create-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: var(--text-h);
+  font-size: 13px;
+}
+
+.manga-library-create-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.manga-library-new {
+  color: var(--accent);
+  font-weight: 600;
 }

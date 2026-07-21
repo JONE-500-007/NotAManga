@@ -56,6 +56,12 @@ export default function Navbar() {
                 {t("nav.uploadManga")}
               </Link>
             )}
+            <Link to="/library" className="btn btn-ghost">
+              <span className="material-symbols-outlined" aria-hidden="true">
+                collections_bookmark
+              </span>
+              {t("nav.myLibrary")}
+            </Link>
             {user.role === "admin" && (
               <div className="admin-menu" ref={adminMenuRef}>
                 <button
@@ -146,6 +152,12 @@ export default function Navbar() {
                     {t("nav.uploadManga")}
                   </Link>
                 )}
+                <Link to="/library" className="btn btn-ghost" onClick={closeMenu}>
+                  <span className="material-symbols-outlined" aria-hidden="true">
+                    collections_bookmark
+                  </span>
+                  {t("nav.myLibrary")}
+                </Link>
                 {user.role === "admin" && (
                   <div className="mobile-menu-admin-group">
                     <span className="mobile-menu-admin-label">{t("nav.admin")}</span>

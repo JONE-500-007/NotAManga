@@ -140,6 +140,30 @@ async function initSchema(pool) {
       PRIMARY KEY (manga_id, tag_id)
     );
 
+    -- Lets an admin control the display order of the master tag list, and
+    -- an uploader control the order tags appear on their own manga, instead
+    -- of both always falling back to alphabetical. Backfills existing rows
+    -- to their current alphabetical order so nothing visibly jumps around
+    -- the first time this runs against an existing database.
+    ALTER TABLE tags ADD COLUMN IF NOT EXISTS position INTEGER;
+    UPDATE tags SET position = ranked.rn
+      FROM (SELECT id, ROW_NUMBER() OVER (ORDER BY name ASC) AS rn FROM tags) ranked
+      WHERE tags.id = ranked.id AND tags.position IS NULL;
+    ALTER TABLE tags ALTER COLUMN position SET NOT NULL;
+    ALTER TABLE tags DROP CONSTRAINT IF EXISTS tags_position_key;
+    ALTER TABLE tags ADD CONSTRAINT tags_position_key UNIQUE (position);
+
+    ALTER TABLE manga_tags ADD COLUMN IF NOT EXISTS position INTEGER;
+    UPDATE manga_tags SET position = ranked.rn
+      FROM (
+        SELECT mt.manga_id, mt.tag_id, ROW_NUMBER() OVER (PARTITION BY mt.manga_id ORDER BY t.name ASC) AS rn
+        FROM manga_tags mt JOIN tags t ON t.id = mt.tag_id
+      ) ranked
+      WHERE manga_tags.manga_id = ranked.manga_id AND manga_tags.tag_id = ranked.tag_id AND manga_tags.position IS NULL;
+    ALTER TABLE manga_tags ALTER COLUMN position SET NOT NULL;
+    ALTER TABLE manga_tags DROP CONSTRAINT IF EXISTS manga_tags_manga_id_position_key;
+    ALTER TABLE manga_tags ADD CONSTRAINT manga_tags_manga_id_position_key UNIQUE (manga_id, position);
+
     -- VVIP ranks above member (a "supporter" tier) but still below
     -- uploader/admin — it grants no extra permissions on its own, it's just
     -- a role a manga's visible_roles allow-list can target.
@@ -185,6 +209,42 @@ async function initSchema(pool) {
       content TEXT,
       image_path TEXT,
       UNIQUE (chapter_id, position)
+    );
+
+    -- One rating per (manga, user) on a 5-level scale ("VERY BAAAD" ..
+    -- "ABSOLUTE CINEMA") rather than MangaDex's 10.
+    CREATE TABLE IF NOT EXISTS manga_ratings (
+      manga_id INTEGER NOT NULL REFERENCES manga(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (manga_id, user_id)
+    );
+
+    -- Raw read-open counter: incremented once per chapter page load
+    -- regardless of which chapter, so it reads as the manga's overall
+    -- "views" rather than a per-chapter count.
+    ALTER TABLE manga ADD COLUMN IF NOT EXISTS view_count INTEGER NOT NULL DEFAULT 0;
+
+    -- A user-curated "read later" collection (MangaDex-style MDList): a
+    -- named, optionally-described shelf of manga/novels. is_private controls
+    -- whether the list is visible to anyone with its link, not just its
+    -- owner (there's no public directory of lists to browse, only direct
+    -- links, so this is a lightweight "share or don't" toggle).
+    CREATE TABLE IF NOT EXISTS manga_lists (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      description TEXT,
+      is_private BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS manga_list_items (
+      list_id INTEGER NOT NULL REFERENCES manga_lists(id) ON DELETE CASCADE,
+      manga_id INTEGER NOT NULL REFERENCES manga(id) ON DELETE CASCADE,
+      added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (list_id, manga_id)
     );
   `);
 }

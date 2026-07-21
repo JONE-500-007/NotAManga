@@ -9,6 +9,7 @@ const categoryRoutes = require("./routes/category.routes");
 const usersRoutes = require("./routes/users.routes");
 const settingsRoutes = require("./routes/settings.routes");
 const tagRoutes = require("./routes/tag.routes");
+const listRoutes = require("./routes/list.routes");
 
 const app = express();
 app.use(express.json());
@@ -26,6 +27,7 @@ app.use("/api", categoryRoutes);
 app.use("/api", usersRoutes);
 app.use("/api", settingsRoutes);
 app.use("/api", tagRoutes);
+app.use("/api", listRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err);
