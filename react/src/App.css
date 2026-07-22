@@ -1891,6 +1891,13 @@ input[type="file"]::file-selector-button:hover {
   max-height: none;
   max-width: none;
   width: 100%;
+  /* Without a reserved size, height stays unknown (collapsing toward 0)
+     until the file finishes loading, then snaps to full size — on a slow
+     mobile connection/scroll this reads as the page suddenly shrinking then
+     popping back. `auto` keeps this as a placeholder only: the image's own
+     intrinsic ratio takes over the instant it loads, so normal (non-2:3)
+     pages aren't stretched to fit it. */
+  aspect-ratio: auto 2 / 3;
 }
 
 .reader-longstrip-group.reader-spread-double .reader-image {
