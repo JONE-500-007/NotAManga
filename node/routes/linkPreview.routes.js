@@ -13,6 +13,9 @@ const router = express.Router();
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 const SITE_NAME = "NotAManga";
 const DEFAULT_DESCRIPTION = "Read manga and light novels online.";
+// Same file react/index.html points <link rel="icon"> at — Discord (and a
+// few others) read this tag to show a small site icon alongside the embed.
+const SITE_ICON_URL = `${FRONTEND_URL}/icon_web.png`;
 
 function escapeHtml(text) {
   return String(text)
@@ -52,6 +55,7 @@ function renderMetaPage({ title, description, image, url, type }) {
 <head>
 <meta charset="utf-8">
 <title>${safeTitle}</title>
+<link rel="icon" type="image/png" href="${SITE_ICON_URL}">
 <meta name="description" content="${safeDescription}">
 <meta property="og:site_name" content="${SITE_NAME}">
 <meta property="og:type" content="${type}">
