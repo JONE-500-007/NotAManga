@@ -45,11 +45,18 @@ function truncate(text, max) {
   return `${text.slice(0, max - 1).trimEnd()}…`;
 }
 
-function renderMetaPage({ title, description, image, url, type }) {
+// cardStyle controls the embed's layout, not just its content: Discord
+// mirrors the Twitter Card spec here — "summary_large_image" is the big
+// image-below-text card (manga/chapter covers, where the image IS the
+// content worth showing large), "summary" is the compact card with a small
+// square thumbnail beside the text (profile avatars, à la Steam profiles —
+// the avatar is just an identifier, not the point of the share).
+function renderMetaPage({ title, description, image, url, type, cardStyle = "summary_large_image" }) {
   const safeTitle = escapeHtml(title);
   const safeDescription = escapeHtml(description);
   const safeImage = image ? escapeHtml(image) : "";
   const safeUrl = escapeHtml(url);
+  const twitterCard = safeImage ? cardStyle : "summary";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -63,7 +70,7 @@ function renderMetaPage({ title, description, image, url, type }) {
 <meta property="og:title" content="${safeTitle}">
 <meta property="og:description" content="${safeDescription}">
 <meta property="og:url" content="${safeUrl}">
-${safeImage ? `<meta property="og:image" content="${safeImage}">\n` : ""}<meta name="twitter:card" content="${safeImage ? "summary_large_image" : "summary"}">
+${safeImage ? `<meta property="og:image" content="${safeImage}">\n` : ""}<meta name="twitter:card" content="${twitterCard}">
 <meta name="twitter:title" content="${safeTitle}">
 <meta name="twitter:description" content="${safeDescription}">
 ${safeImage ? `<meta name="twitter:image" content="${safeImage}">\n` : ""}</head>
@@ -177,6 +184,7 @@ router.get("/users/:userId", async (req, res) => {
       image: `${FRONTEND_URL}${user.avatar_path}`,
       url,
       type: "profile",
+      cardStyle: "summary",
     })
   );
 });
