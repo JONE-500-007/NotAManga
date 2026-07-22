@@ -1,6 +1,7 @@
 const express = require("express");
 const pool = require("../db/pool");
 const { canViewManga } = require("../utils/mangaVisibility");
+const { PUBLIC_USER_COLUMNS } = require("../utils/userColumns");
 
 // Link-unfurling bots (Discord, Facebook, Twitter/X, Slack, LINE, ...) fetch
 // a shared URL and parse its raw HTML for Open Graph tags — they don't run
@@ -12,7 +13,7 @@ const router = express.Router();
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 const SITE_NAME = "NotAManga";
-const DEFAULT_DESCRIPTION = "Read manga and light novels online.";
+const DEFAULT_DESCRIPTION = "ฉันๆๆนาๆๆๆๆ ขอๆขนอๆสสๆอขๆ โทษๆาๆทๆทาทๆา";
 // Same file react/index.html points <link rel="icon"> at — Discord (and a
 // few others) read this tag to show a small site icon alongside the embed.
 const SITE_ICON_URL = `${FRONTEND_URL}/icon_web.png`;
@@ -155,6 +156,27 @@ router.get("/manga/:mangaId/chapter/:chapterId", async (req, res) => {
       image: manga.cover_path ? `${FRONTEND_URL}${manga.cover_path}` : null,
       url,
       type: "article",
+    })
+  );
+});
+
+// Profiles have no privacy toggle (unlike manga) — the same PUBLIC_USER_COLUMNS
+// used by GET /api/users/:userId is fine to read straight from here.
+router.get("/users/:userId", async (req, res) => {
+  const { userId } = req.params;
+  const url = `${FRONTEND_URL}/users/${userId}`;
+
+  const result = await pool.query(`SELECT ${PUBLIC_USER_COLUMNS} FROM users WHERE id = $1`, [userId]);
+  const user = result.rows[0];
+  if (!user) return fallbackPage(res, url, 404);
+
+  res.type("html").send(
+    renderMetaPage({
+      title: stripFormatting(user.display_name || user.username) || SITE_NAME,
+      description: truncate(stripFormatting(user.bio) || DEFAULT_DESCRIPTION, 200),
+      image: `${FRONTEND_URL}${user.avatar_path}`,
+      url,
+      type: "profile",
     })
   );
 });
