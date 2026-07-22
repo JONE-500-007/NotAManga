@@ -654,13 +654,15 @@ router.get("/manga/:mangaId/chapters/:chapterId", optionalAuth, async (req, res)
   const chapter = chapterResult.rows[0];
   if (!chapter) return res.status(404).json({ error: "Chapter not found" });
 
-  // Counts as a "view" of the manga overall, not of this one chapter —
-  // opening any chapter bumps the same total shown on the manga's page.
-  // The uploader/an admin fetching this same route to load the edit-chapter
-  // form (EditChapterPage/EditNovelChapterPage) shouldn't inflate it.
+  // Counts as a "view" of the manga overall (shown to readers) and of this
+  // specific chapter (backend-only, for the admin dashboard). The
+  // uploader/an admin fetching this same route to load the edit-chapter
+  // form (EditChapterPage/EditNovelChapterPage) shouldn't inflate either.
   const isOwnerRequest = req.user && (req.user.id === uploaderId || req.user.role === "admin");
   if (!isOwnerRequest) {
     await pool.query("UPDATE manga SET view_count = view_count + 1 WHERE id = $1", [mangaId]);
+    await pool.query("UPDATE chapters SET view_count = view_count + 1 WHERE id = $1", [chapterId]);
+    await pool.query("INSERT INTO view_events (manga_id, chapter_id) VALUES ($1, $2)", [mangaId, chapterId]);
   }
 
   const siblingsResult = await pool.query(

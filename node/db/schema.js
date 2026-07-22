@@ -246,6 +246,23 @@ async function initSchema(pool) {
       added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       PRIMARY KEY (list_id, manga_id)
     );
+
+    -- Same raw open-counter idea as manga.view_count, but scoped per chapter
+    -- — backend-only for now (admin dashboard), not shown to readers.
+    ALTER TABLE chapters ADD COLUMN IF NOT EXISTS view_count INTEGER NOT NULL DEFAULT 0;
+
+    -- One row per qualifying chapter-open (see the isOwnerRequest guard where
+    -- this is inserted) — a timestamped log alongside the running counters
+    -- above, so the admin dashboard can chart views over time instead of
+    -- just a lifetime total. Admin-only, never shown to readers.
+    CREATE TABLE IF NOT EXISTS view_events (
+      id SERIAL PRIMARY KEY,
+      manga_id INTEGER NOT NULL REFERENCES manga(id) ON DELETE CASCADE,
+      chapter_id INTEGER NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+      viewed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS view_events_manga_viewed_idx ON view_events (manga_id, viewed_at);
+    CREATE INDEX IF NOT EXISTS view_events_viewed_idx ON view_events (viewed_at);
   `);
 }
 

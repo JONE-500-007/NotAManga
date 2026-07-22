@@ -10,6 +10,8 @@ const usersRoutes = require("./routes/users.routes");
 const settingsRoutes = require("./routes/settings.routes");
 const tagRoutes = require("./routes/tag.routes");
 const listRoutes = require("./routes/list.routes");
+const adminRoutes = require("./routes/admin.routes");
+const linkPreviewRoutes = require("./routes/linkPreview.routes");
 
 const app = express();
 app.use(express.json());
@@ -28,6 +30,10 @@ app.use("/api", usersRoutes);
 app.use("/api", settingsRoutes);
 app.use("/api", tagRoutes);
 app.use("/api", listRoutes);
+app.use("/api", adminRoutes);
+// Bare (non-/api) paths matching the public share URLs — nginx only routes
+// known bot user-agents here in production; see linkPreview.routes.js.
+app.use("/", linkPreviewRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err);

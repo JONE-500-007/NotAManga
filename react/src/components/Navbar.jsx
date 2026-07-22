@@ -75,6 +75,9 @@ export default function Navbar() {
                 </button>
                 {adminMenuOpen && (
                   <div className="admin-menu-panel">
+                    <Link to="/admin/dashboard" className="admin-menu-item" onClick={() => setAdminMenuOpen(false)}>
+                      {t("nav.adminDashboard")}
+                    </Link>
                     <Link to="/admin/categories" className="admin-menu-item" onClick={() => setAdminMenuOpen(false)}>
                       {t("nav.adminCategories")}
                     </Link>
@@ -161,6 +164,9 @@ export default function Navbar() {
                 {user.role === "admin" && (
                   <div className="mobile-menu-admin-group">
                     <span className="mobile-menu-admin-label">{t("nav.admin")}</span>
+                    <Link to="/admin/dashboard" className="btn btn-ghost" onClick={closeMenu}>
+                      {t("nav.adminDashboard")}
+                    </Link>
                     <Link to="/admin/categories" className="btn btn-ghost" onClick={closeMenu}>
                       {t("nav.adminCategories")}
                     </Link>
