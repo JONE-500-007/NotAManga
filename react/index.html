@@ -15,6 +15,26 @@
       rel="stylesheet"
     />
     <title>NotAManga</title>
+
+    <!--
+      The homepage isn't per-request dynamic data like a manga page (see
+      node/routes/linkPreview.routes.js for those), so there's nothing to
+      look up — these can just ship as static tags in every response,
+      bot or browser, with no nginx routing needed. og:url/og:image must be
+      absolute per the OG spec, so the domain below is hardcoded; update it
+      here if the site ever moves domains.
+    -->
+    <meta name="description" content="Read manga and light novels online." />
+    <meta property="og:site_name" content="NotAManga" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="NotAManga" />
+    <meta property="og:description" content="Read manga and light novels online." />
+    <meta property="og:url" content="https://notamanga.dpdns.org/" />
+    <meta property="og:image" content="https://notamanga.dpdns.org/icon_web.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="NotAManga" />
+    <meta name="twitter:description" content="Read manga and light novels online." />
+    <meta name="twitter:image" content="https://notamanga.dpdns.org/icon_web.png" />
   </head>
   <body>
     <div id="root"></div>
