@@ -2,6 +2,7 @@ const express = require("express");
 const pool = require("../db/pool");
 const { requireAuth, optionalAuth } = require("../middleware/auth");
 const { visibilityFilter } = require("../utils/mangaVisibility");
+const { assertMaxLength, MAX_TITLE_LENGTH, MAX_DESCRIPTION_LENGTH } = require("../utils/validation");
 
 const router = express.Router();
 
@@ -65,6 +66,8 @@ router.get("/lists/:listId", optionalAuth, async (req, res) => {
 router.post("/lists", requireAuth, async (req, res) => {
   const { title, description, is_private } = req.body;
   if (!title || !title.trim()) return res.status(400).json({ error: "Title is required" });
+  assertMaxLength(title, { label: "Title", max: MAX_TITLE_LENGTH });
+  assertMaxLength(description, { label: "Description", max: MAX_DESCRIPTION_LENGTH });
 
   const result = await pool.query(
     "INSERT INTO manga_lists (user_id, title, description, is_private) VALUES ($1, $2, $3, $4) RETURNING *",
@@ -77,6 +80,8 @@ router.patch("/lists/:listId", requireAuth, async (req, res) => {
   const { listId } = req.params;
   const { title, description, is_private } = req.body;
   if (!title || !title.trim()) return res.status(400).json({ error: "Title is required" });
+  assertMaxLength(title, { label: "Title", max: MAX_TITLE_LENGTH });
+  assertMaxLength(description, { label: "Description", max: MAX_DESCRIPTION_LENGTH });
 
   const result = await pool.query(
     "UPDATE manga_lists SET title = $1, description = $2, is_private = $3 WHERE id = $4 AND user_id = $5 RETURNING *",

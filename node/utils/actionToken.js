@@ -1,6 +1,5 @@
 const jwt = require("jsonwebtoken");
-
-const SECRET = process.env.JWT_SECRET || "dev-only-insecure-secret-change-me";
+const { JWT_SECRET: SECRET } = require("./secrets");
 
 // Stateless tokens for one-shot email actions (verify-email, reset-password)
 // signed with the same secret as session tokens but a distinct "purpose"

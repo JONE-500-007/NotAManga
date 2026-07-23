@@ -2,7 +2,10 @@ services:
   # Backend Node.js
   backend:
     container_name: node-backend2
-    image: node:20
+    # file-type (image upload magic-byte validation) requires Node >=22 as
+    # of the version with its ASF-parser DoS fixed — keep in sync with
+    # node/Dockerfile's base image.
+    image: node:22
     working_dir: /app
     volumes:
       - ./node:/app

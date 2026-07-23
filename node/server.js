@@ -12,8 +12,15 @@ const tagRoutes = require("./routes/tag.routes");
 const listRoutes = require("./routes/list.routes");
 const adminRoutes = require("./routes/admin.routes");
 const linkPreviewRoutes = require("./routes/linkPreview.routes");
+const { toFriendlyError } = require("./utils/friendlyError");
 
 const app = express();
+// Exactly one reverse proxy sits in front of this app (nginx — see
+// react/nginx.conf's /api/ block, which sets X-Forwarded-For). Trusting
+// precisely 1 hop (not `true`, which trusts the whole chain including
+// headers a client could forge) is what lets express-rate-limit and
+// req.ip key off the real visitor instead of nginx's own address.
+app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
@@ -37,7 +44,8 @@ app.use("/", linkPreviewRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err);
-  res.status(err.status || 500).json({ error: err.message || "Internal server error" });
+  const { status, message } = toFriendlyError(err);
+  res.status(status).json({ error: message });
 });
 
 initSchema(pool)

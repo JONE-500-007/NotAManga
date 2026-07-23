@@ -4,6 +4,7 @@ const bcrypt = require("bcryptjs");
 const pool = require("../db/pool");
 const { sign, COOKIE_OPTIONS } = require("../utils/jwt");
 const { requireAuth } = require("../middleware/auth");
+const { loginLimiter, registerLimiter, forgotPasswordLimiter, sendVerificationLimiter } = require("../middleware/rateLimit");
 const { SAFE_USER_COLUMNS } = require("../utils/userColumns");
 const { signActionToken, verifyActionToken } = require("../utils/actionToken");
 const { sendVerificationEmail, sendPasswordResetEmail } = require("../utils/email");
@@ -18,6 +19,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 const OAUTH_STATE_COOKIE_OPTIONS = {
   httpOnly: true,
   sameSite: "lax",
+  secure: process.env.NODE_ENV === "production",
   maxAge: 5 * 60 * 1000,
 };
 
@@ -34,7 +36,7 @@ async function generateUniqueUsername(base) {
   }
 }
 
-router.post("/login", async (req, res) => {
+router.post("/login", loginLimiter, async (req, res) => {
   const { identifier, password } = req.body;
   if (!identifier || !password) {
     return res.status(400).json({ error: "Username/email and password are required" });
@@ -58,7 +60,7 @@ router.post("/login", async (req, res) => {
   res.json(safe.rows[0]);
 });
 
-router.post("/register", async (req, res) => {
+router.post("/register", registerLimiter, async (req, res) => {
   const { username, email, password } = req.body;
   if (!username || !email || !password) {
     return res.status(400).json({ error: "Username, email and password are required" });
@@ -86,7 +88,9 @@ router.post("/register", async (req, res) => {
 });
 
 router.post("/logout", requireAuth, (req, res) => {
-  res.clearCookie("token", { httpOnly: true, sameSite: "lax" });
+  // clearCookie must be called with the same attributes the cookie was set
+  // with (secure/sameSite in particular), or some browsers won't drop it.
+  res.clearCookie("token", COOKIE_OPTIONS);
   res.json({ ok: true });
 });
 
@@ -119,7 +123,7 @@ router.get("/google", (req, res) => {
 router.get("/google/callback", async (req, res) => {
   const { code, state } = req.query;
   const expectedState = req.cookies.oauth_state;
-  res.clearCookie("oauth_state", { httpOnly: true, sameSite: "lax" });
+  res.clearCookie("oauth_state", OAUTH_STATE_COOKIE_OPTIONS);
 
   if (!code || !state || state !== expectedState) {
     return res.redirect(`${FRONTEND_URL}/login?error=google`);
@@ -187,7 +191,7 @@ function passwordFingerprint(passwordHash) {
   return crypto.createHash("sha256").update(passwordHash).digest("hex").slice(0, 16);
 }
 
-router.post("/send-verification", requireAuth, async (req, res) => {
+router.post("/send-verification", requireAuth, sendVerificationLimiter, async (req, res) => {
   const result = await pool.query("SELECT auth_provider, email, email_verified FROM users WHERE id = $1", [
     req.user.id,
   ]);
@@ -222,7 +226,7 @@ router.post("/verify-email", async (req, res) => {
   }
 });
 
-router.post("/forgot-password", async (req, res) => {
+router.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
   const { identifier } = req.body;
   if (!identifier) return res.status(400).json({ error: "Username or email is required" });
 

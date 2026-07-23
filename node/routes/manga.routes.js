@@ -3,13 +3,31 @@ const fs = require("fs/promises");
 const path = require("path");
 const pool = require("../db/pool");
 const { requireAuth, optionalAuth, requireRole, requireMangaOwner } = require("../middleware/auth");
-const { coverUpload, chapterPagesUpload, artUpload, novelImageUpload, PAGES_DIR } = require("../middleware/upload");
+const {
+  coverUpload,
+  chapterPagesUpload,
+  artUpload,
+  novelImageUpload,
+  saveValidatedImage,
+  PAGES_DIR,
+  COVERS_DIR,
+  ART_DIR,
+  NOVEL_IMAGES_DIR,
+} = require("../middleware/upload");
 const { savePageFiles } = require("../utils/pageStorage");
 const { saveNovelBlocks } = require("../utils/novelBlocks");
 const { reorderRows } = require("../utils/reorder");
 const { deleteUploadedFile } = require("../utils/fileStorage");
 const { DEFAULT_AVATAR_PATH } = require("../middleware/upload");
 const { visibilityFilter, canViewManga } = require("../utils/mangaVisibility");
+const {
+  assertBoundedNumber,
+  assertMaxLength,
+  MAX_CHAPTER_NUMBER,
+  MAX_VOLUME_NUMBER,
+  MAX_TITLE_LENGTH,
+  MAX_DESCRIPTION_LENGTH,
+} = require("../utils/validation");
 
 const router = express.Router();
 
@@ -92,10 +110,12 @@ router.delete("/manga/:mangaId/pin", requireAuth, requireRole("admin"), async (r
 router.post("/manga", requireAuth, requireRole("uploader", "admin"), coverUpload.single("cover"), async (req, res) => {
   const { title, description } = req.body;
   if (!title) return res.status(400).json({ error: "Title is required" });
+  assertMaxLength(title, { label: "Title", max: MAX_TITLE_LENGTH });
+  assertMaxLength(description, { label: "Description", max: MAX_DESCRIPTION_LENGTH });
 
   const workType = req.body.work_type === "novel" ? "novel" : "manga";
   const format = req.body.format === "comic" ? "comic" : "manga";
-  const coverPath = req.file ? `/uploads/covers/${req.file.filename}` : null;
+  const coverPath = req.file ? `/uploads/covers/${await saveValidatedImage(req.file, COVERS_DIR)}` : null;
   const result = await pool.query(
     "INSERT INTO manga (title, description, cover_path, format, work_type, uploader_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
     [title, description || null, coverPath, format, workType, req.user.id]
@@ -359,6 +379,8 @@ router.patch(
     const { mangaId } = req.params;
     const { title, description } = req.body;
     if (!title) return res.status(400).json({ error: "Title is required" });
+    assertMaxLength(title, { label: "Title", max: MAX_TITLE_LENGTH });
+    assertMaxLength(description, { label: "Description", max: MAX_DESCRIPTION_LENGTH });
 
     const format = req.body.format === "comic" ? "comic" : "manga";
 
@@ -367,7 +389,7 @@ router.patch(
       await deleteUploadedFile(existing.rows[0]?.cover_path);
     }
 
-    const coverPath = req.file ? `/uploads/covers/${req.file.filename}` : undefined;
+    const coverPath = req.file ? `/uploads/covers/${await saveValidatedImage(req.file, COVERS_DIR)}` : undefined;
     const result = await pool.query(
       `UPDATE manga SET title = $1, description = $2, format = $3, cover_path = COALESCE($4, cover_path) WHERE id = $5 RETURNING *`,
       [title, description || null, format, coverPath || null, mangaId]
@@ -410,6 +432,9 @@ router.post(
     const { mangaId } = req.params;
     const { chapter_number, title, volume } = req.body;
     if (!chapter_number) return res.status(400).json({ error: "Chapter number is required" });
+    assertBoundedNumber(chapter_number, { label: "Chapter number", max: MAX_CHAPTER_NUMBER });
+    assertBoundedNumber(volume, { label: "Volume", max: MAX_VOLUME_NUMBER, optional: true });
+    assertMaxLength(title, { label: "Chapter title", max: MAX_TITLE_LENGTH });
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: "At least one page image is required" });
     }
@@ -458,6 +483,9 @@ router.post(
     const { mangaId } = req.params;
     const { chapter_number, title, volume } = req.body;
     if (!chapter_number) return res.status(400).json({ error: "Chapter number is required" });
+    assertBoundedNumber(chapter_number, { label: "Chapter number", max: MAX_CHAPTER_NUMBER });
+    assertBoundedNumber(volume, { label: "Volume", max: MAX_VOLUME_NUMBER, optional: true });
+    assertMaxLength(title, { label: "Chapter title", max: MAX_TITLE_LENGTH });
 
     let blocks;
     try {
@@ -485,13 +513,12 @@ router.post(
       );
       const chapter = chapterResult.rows[0];
 
-      await saveNovelBlocks(client, { chapterId: chapter.id, blocks, files: req.files || [] });
+      await saveNovelBlocks(client, { chapterId: chapter.id, blocks, files: req.files || [], destDir: NOVEL_IMAGES_DIR });
 
       await client.query("COMMIT");
       res.status(201).json(chapter);
     } catch (err) {
       await client.query("ROLLBACK");
-      await Promise.all((req.files || []).map((f) => fs.unlink(f.path).catch(() => {})));
       throw err;
     } finally {
       client.release();
@@ -509,6 +536,9 @@ router.patch(
     const { mangaId, chapterId } = req.params;
     const { chapter_number, title, volume } = req.body;
     if (!chapter_number) return res.status(400).json({ error: "Chapter number is required" });
+    assertBoundedNumber(chapter_number, { label: "Chapter number", max: MAX_CHAPTER_NUMBER });
+    assertBoundedNumber(volume, { label: "Volume", max: MAX_VOLUME_NUMBER, optional: true });
+    assertMaxLength(title, { label: "Chapter title", max: MAX_TITLE_LENGTH });
 
     let blocks;
     try {
@@ -545,7 +575,7 @@ router.patch(
       }
 
       await client.query("DELETE FROM novel_blocks WHERE chapter_id = $1", [chapterId]);
-      await saveNovelBlocks(client, { chapterId, blocks, files: req.files || [] });
+      await saveNovelBlocks(client, { chapterId, blocks, files: req.files || [], destDir: NOVEL_IMAGES_DIR });
 
       await client.query("COMMIT");
       await Promise.all(removedImagePaths.map((p) => deleteUploadedFile(p)));
@@ -557,7 +587,6 @@ router.patch(
       res.json({ ...chapterResult.rows[0], blocks: blocksResult.rows });
     } catch (err) {
       await client.query("ROLLBACK");
-      await Promise.all((req.files || []).map((f) => fs.unlink(f.path).catch(() => {})));
       throw err;
     } finally {
       client.release();
@@ -607,6 +636,9 @@ router.patch(
     const { mangaId, chapterId } = req.params;
     const { chapter_number, title, volume } = req.body;
     if (!chapter_number) return res.status(400).json({ error: "Chapter number is required" });
+    assertBoundedNumber(chapter_number, { label: "Chapter number", max: MAX_CHAPTER_NUMBER });
+    assertBoundedNumber(volume, { label: "Volume", max: MAX_VOLUME_NUMBER, optional: true });
+    assertMaxLength(title, { label: "Chapter title", max: MAX_TITLE_LENGTH });
 
     const result = await pool.query(
       "UPDATE chapters SET chapter_number = $1, title = $2, volume = $3 WHERE id = $4 AND manga_id = $5 RETURNING *",
@@ -643,9 +675,21 @@ router.delete(
 router.get("/manga/:mangaId/chapters/:chapterId", optionalAuth, async (req, res) => {
   const { mangaId, chapterId } = req.params;
 
-  const mangaResult = await pool.query("SELECT work_type, uploader_id FROM manga WHERE id = $1", [mangaId]);
+  const mangaResult = await pool.query(
+    "SELECT work_type, uploader_id, is_private FROM manga WHERE id = $1",
+    [mangaId]
+  );
   if (mangaResult.rows.length === 0) return res.status(404).json({ error: "Manga not found" });
-  const { work_type: workType, uploader_id: uploaderId } = mangaResult.rows[0];
+  const manga = mangaResult.rows[0];
+  const { work_type: workType, uploader_id: uploaderId } = manga;
+
+  const visibleRolesResult = await pool.query(
+    "SELECT role FROM manga_visible_roles WHERE manga_id = $1",
+    [mangaId]
+  );
+  if (!canViewManga(req.user, manga, visibleRolesResult.rows.map((r) => r.role))) {
+    return res.status(404).json({ error: "Manga not found" });
+  }
 
   const chapterResult = await pool.query(
     "SELECT * FROM chapters WHERE id = $1 AND manga_id = $2",
@@ -792,6 +836,22 @@ router.delete(
 
 router.get("/manga/:mangaId/art", optionalAuth, async (req, res) => {
   const { mangaId } = req.params;
+
+  const mangaResult = await pool.query(
+    "SELECT uploader_id, is_private FROM manga WHERE id = $1",
+    [mangaId]
+  );
+  const manga = mangaResult.rows[0];
+  if (!manga) return res.status(404).json({ error: "Manga not found" });
+
+  const visibleRolesResult = await pool.query(
+    "SELECT role FROM manga_visible_roles WHERE manga_id = $1",
+    [mangaId]
+  );
+  if (!canViewManga(req.user, manga, visibleRolesResult.rows.map((r) => r.role))) {
+    return res.status(404).json({ error: "Manga not found" });
+  }
+
   const result = await pool.query(
     "SELECT id, image_path, caption, position FROM art WHERE manga_id = $1 ORDER BY position ASC",
     [mangaId]
@@ -816,7 +876,7 @@ router.post(
     );
     const position = Number(maxResult.rows[0].max) + 1;
 
-    const imagePath = `/uploads/art/${req.file.filename}`;
+    const imagePath = `/uploads/art/${await saveValidatedImage(req.file, ART_DIR)}`;
     const result = await pool.query(
       "INSERT INTO art (manga_id, image_path, caption, position) VALUES ($1, $2, $3, $4) RETURNING *",
       [mangaId, imagePath, caption || null, position]

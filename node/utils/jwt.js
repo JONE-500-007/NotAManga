@@ -1,6 +1,5 @@
 const jwt = require("jsonwebtoken");
-
-const SECRET = process.env.JWT_SECRET || "dev-only-insecure-secret-change-me";
+const { JWT_SECRET: SECRET } = require("./secrets");
 
 // Sliding idle timeout: a session is valid for this long since the *last*
 // authenticated request. requireAuth reissues the token/cookie on every
@@ -10,6 +9,10 @@ const SESSION_DURATION_SECONDS = 4 * 60 * 60; // 4 hours
 const COOKIE_OPTIONS = {
   httpOnly: true,
   sameSite: "lax",
+  // Only marked Secure in production so the cookie still works over plain
+  // HTTP in local dev; the deployed site is HTTPS-only via Cloudflare (see
+  // docker-compose.prod.yml's NODE_ENV=production).
+  secure: process.env.NODE_ENV === "production",
   maxAge: SESSION_DURATION_SECONDS * 1000,
 };
 

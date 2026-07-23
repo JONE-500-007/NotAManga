@@ -6,6 +6,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
+      NODE_ENV: production
       JWT_SECRET: "${JWT_SECRET}"
       DB_HOST: db
       DB_USER: justthisuser
@@ -30,7 +31,12 @@ services:
       dockerfile: Dockerfile.prod
     restart: unless-stopped
     ports:
-      - "80:80"
+      # Bound to loopback only — cloudflared runs on this same host and
+      # reaches the site via 127.0.0.1, so this isn't needed on any public
+      # interface. Without this, anyone who learns the origin's real IP
+      # could hit it directly on port 80 and skip Cloudflare entirely (WAF,
+      # rate limiting, DDoS protection, etc. all live at the edge).
+      - "127.0.0.1:80:80"
     depends_on:
       - backend
 

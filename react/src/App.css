@@ -727,11 +727,17 @@
 }
 
 .manga-hero-cover {
-  width: 220px;
+  width: 260px;
   flex-shrink: 0;
   border-radius: 8px;
   overflow: hidden;
-  aspect-ratio: 2 / 3;
+  /* No fixed aspect-ratio: the flex container's default stretch makes this
+     match the height of .manga-hero-info, so a long description grows the
+     cover with it instead of leaving empty space beside it. min-height keeps
+     the original 2:3 look when the description is short; max-height stops a
+     very long description from zooming object-fit: cover in too far. */
+  min-height: 390px;
+  max-height: 410px;
   background: var(--surface-alt);
 }
 
@@ -773,6 +779,10 @@
 .manga-hero-actions {
   display: flex;
   gap: 10px;
+  /* Pushes the buttons to the bottom of .manga-hero-info, which gets
+     stretched taller than its own content whenever the cover (min/max-height
+     driven) is taller than the text stack above. */
+  margin-top: auto;
 }
 
 .manga-hero-info {
@@ -1065,6 +1075,8 @@
   }
   .manga-hero-cover {
     width: 160px;
+    aspect-ratio: 2 / 3;
+    min-height: 0;
   }
   .manga-hero-actions {
     flex-wrap: wrap;

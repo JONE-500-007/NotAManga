@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const multer = require("multer");
+const { detectImageExtension } = require("../utils/imageValidation");
 
 const UPLOADS_ROOT = path.join(__dirname, "..", "uploads");
 const COVERS_DIR = path.join(UPLOADS_ROOT, "covers");
@@ -26,76 +27,39 @@ const DEFAULT_BANNER_PATH = "/uploads/banners/banner_default.png";
 
 function imageFileFilter(req, file, cb) {
   if (!file.mimetype.startsWith("image/")) {
-    return cb(new Error("Only image files are allowed"));
+    const err = new Error("Only image files are allowed");
+    err.status = 400;
+    return cb(err);
   }
   cb(null, true);
 }
 
-const coverUpload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => cb(null, COVERS_DIR),
-    filename: (req, file, cb) => {
-      const safeName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-      cb(null, `${crypto.randomUUID()}-${safeName}`);
-    },
-  }),
-  fileFilter: imageFileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 },
-});
-
-const chapterPagesUpload = multer({
+// Cheap client-claimed-mimetype pre-filter above, then buffered into memory
+// so every route can run the buffer through detectImageExtension (real
+// magic-byte check) before anything is written to disk under a name/type an
+// attacker chose. See utils/imageValidation.js for why that check matters.
+const memoryUploadOptions = {
   storage: multer.memoryStorage(),
   fileFilter: imageFileFilter,
-  limits: { fileSize: 10 * 1024 * 1024, files: 300 },
-});
+};
 
-const artUpload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => cb(null, ART_DIR),
-    filename: (req, file, cb) => {
-      const safeName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-      cb(null, `${crypto.randomUUID()}-${safeName}`);
-    },
-  }),
-  fileFilter: imageFileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 },
-});
+const coverUpload = multer({ ...memoryUploadOptions, limits: { fileSize: 10 * 1024 * 1024 } });
+const artUpload = multer({ ...memoryUploadOptions, limits: { fileSize: 10 * 1024 * 1024 } });
+const avatarUpload = multer({ ...memoryUploadOptions, limits: { fileSize: 10 * 1024 * 1024 } });
+const bannerUpload = multer({ ...memoryUploadOptions, limits: { fileSize: 10 * 1024 * 1024 } });
+const novelImageUpload = multer({ ...memoryUploadOptions, limits: { fileSize: 10 * 1024 * 1024, files: 100 } });
+const chapterPagesUpload = multer({ ...memoryUploadOptions, limits: { fileSize: 10 * 1024 * 1024, files: 300 } });
 
-const avatarUpload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => cb(null, AVATARS_DIR),
-    filename: (req, file, cb) => {
-      const safeName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-      cb(null, `${crypto.randomUUID()}-${safeName}`);
-    },
-  }),
-  fileFilter: imageFileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 },
-});
-
-const bannerUpload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => cb(null, BANNERS_DIR),
-    filename: (req, file, cb) => {
-      const safeName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-      cb(null, `${crypto.randomUUID()}-${safeName}`);
-    },
-  }),
-  fileFilter: imageFileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 },
-});
-
-const novelImageUpload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => cb(null, NOVEL_IMAGES_DIR),
-    filename: (req, file, cb) => {
-      const safeName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-      cb(null, `${crypto.randomUUID()}-${safeName}`);
-    },
-  }),
-  fileFilter: imageFileFilter,
-  limits: { fileSize: 10 * 1024 * 1024, files: 100 },
-});
+// Validates a single in-memory upload (multer memoryStorage's file.buffer)
+// and writes it to destDir under a fresh random name + the *detected*
+// extension. Never trust file.originalname's extension or file.mimetype —
+// both come straight from the client.
+async function saveValidatedImage(file, destDir) {
+  const ext = await detectImageExtension(file.buffer);
+  const filename = `${crypto.randomUUID()}.${ext}`;
+  await fs.promises.writeFile(path.join(destDir, filename), file.buffer);
+  return filename;
+}
 
 module.exports = {
   coverUpload,
@@ -104,6 +68,7 @@ module.exports = {
   avatarUpload,
   bannerUpload,
   novelImageUpload,
+  saveValidatedImage,
   COVERS_DIR,
   PAGES_DIR,
   ART_DIR,
