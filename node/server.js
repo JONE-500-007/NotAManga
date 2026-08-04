@@ -11,6 +11,7 @@ const settingsRoutes = require("./routes/settings.routes");
 const tagRoutes = require("./routes/tag.routes");
 const listRoutes = require("./routes/list.routes");
 const adminRoutes = require("./routes/admin.routes");
+const linkSitesRoutes = require("./routes/linkSites.routes");
 const linkPreviewRoutes = require("./routes/linkPreview.routes");
 const { toFriendlyError } = require("./utils/friendlyError");
 
@@ -38,6 +39,7 @@ app.use("/api", settingsRoutes);
 app.use("/api", tagRoutes);
 app.use("/api", listRoutes);
 app.use("/api", adminRoutes);
+app.use("/api", linkSitesRoutes);
 // Bare (non-/api) paths matching the public share URLs — nginx only routes
 // known bot user-agents here in production; see linkPreview.routes.js.
 app.use("/", linkPreviewRoutes);

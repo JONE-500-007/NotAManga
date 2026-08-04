@@ -10,6 +10,8 @@ import SelectedFilePreview from "../components/SelectedFilePreview";
 import SearchableSelect from "../components/SearchableSelect";
 import { renderInlineMarkdown, markdownToPlainText } from "../utils/renderMarkdown";
 
+const STATUS_OPTIONS = ["ongoing", "completed", "hiatus", "cancelled"];
+
 // Native <option>-style dropdown rows render plain text, so an extremely
 // long tag name has to be cut down in plain text here to keep the dropdown
 // from stretching the whole page.
@@ -35,6 +37,7 @@ export default function EditMangaPage() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [tags, setTags] = useState([]);
   const [allTags, setAllTags] = useState([]);
+  const [linkSites, setLinkSites] = useState([]);
   const [selectedTagId, setSelectedTagId] = useState("");
   const [tagError, setTagError] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
@@ -42,6 +45,12 @@ export default function EditMangaPage() {
   const [privacyLocked, setPrivacyLocked] = useState(false);
   const [visibilitySaving, setVisibilitySaving] = useState(false);
   const [visibilityError, setVisibilityError] = useState("");
+  const [status, setStatus] = useState("ongoing");
+  const [author, setAuthor] = useState("");
+  const [artist, setArtist] = useState("");
+  const [alternativeTitles, setAlternativeTitles] = useState([]);
+  const [readOrBuyLinks, setReadOrBuyLinks] = useState([]);
+  const [trackLinks, setTrackLinks] = useState([]);
 
   const {
     draggingId: draggingTagId,
@@ -82,11 +91,22 @@ export default function EditMangaPage() {
       setIsPrivate(data.is_private);
       setVisibleRoles(data.visible_roles || []);
       setPrivacyLocked(data.privacy_locked_by_admin);
+      setStatus(data.status || "ongoing");
+      setAuthor(data.author || "");
+      setArtist(data.artist || "");
+      setAlternativeTitles(data.alternative_titles || []);
+      // Only site_id/url are edited here — site_name/site_icon_path are
+      // display-only fields the detail page uses, resolved fresh from
+      // linkSites on every render instead of being carried in this state.
+      const links = (data.links || []).map((l) => ({ site_id: l.site_id, url: l.url, category: l.category }));
+      setReadOrBuyLinks(links.filter((l) => l.category === "read_or_buy"));
+      setTrackLinks(links.filter((l) => l.category === "track"));
     });
   }, [mangaId]);
 
   useEffect(() => {
     api.get("/tags").then(setAllTags);
+    api.get("/link-sites").then(setLinkSites);
   }, []);
 
   if (manga && manga.uploader_id !== user.id && user.role !== "admin") {
@@ -144,6 +164,32 @@ export default function EditMangaPage() {
     setIsPrivate(updated.is_private);
   };
 
+  const addAlternativeTitle = () => setAlternativeTitles((current) => [...current, ""]);
+  const updateAlternativeTitle = (index, value) =>
+    setAlternativeTitles((current) => current.map((t2, i) => (i === index ? value : t2)));
+  const removeAlternativeTitle = (index) =>
+    setAlternativeTitles((current) => current.filter((_, i) => i !== index));
+
+  // Shared by the Read-or-Buy and Track sections — each keeps its own list
+  // in state, only tagged with its category when the form actually submits.
+  function makeLinkListHandlers(setLinks, category) {
+    const firstSiteId = linkSites.find((s) => s.category === category)?.id ?? "";
+    return {
+      add: () => setLinks((current) => [...current, { site_id: firstSiteId, url: "" }]),
+      update: (index, field, value) =>
+        setLinks((current) => current.map((l, i) => (i === index ? { ...l, [field]: value } : l))),
+      remove: (index) => setLinks((current) => current.filter((_, i) => i !== index)),
+    };
+  }
+  const readOrBuyHandlers = makeLinkListHandlers(setReadOrBuyLinks, "read_or_buy");
+  const trackHandlers = makeLinkListHandlers(setTrackLinks, "track");
+  const readOrBuySiteOptions = linkSites
+    .filter((s) => s.category === "read_or_buy")
+    .map((s) => ({ value: s.id, label: s.name }));
+  const trackSiteOptions = linkSites
+    .filter((s) => s.category === "track")
+    .map((s) => ({ value: s.id, label: s.name }));
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -154,6 +200,18 @@ export default function EditMangaPage() {
       formData.append("title", title);
       formData.append("description", description);
       formData.append("format", format);
+      formData.append("status", status);
+      formData.append("author", author);
+      formData.append("artist", artist);
+      formData.append(
+        "alternative_titles",
+        JSON.stringify(alternativeTitles.map((t2) => t2.trim()).filter(Boolean))
+      );
+      const links = [
+        ...readOrBuyLinks.map((l) => ({ ...l, category: "read_or_buy" })),
+        ...trackLinks.map((l) => ({ ...l, category: "track" })),
+      ].filter((l) => l.url.trim());
+      formData.append("links", JSON.stringify(links));
       if (cover) formData.append("cover", cover);
       await api.patchForm(`/manga/${mangaId}`, formData, setUploadProgress);
       navigate(`/manga/${mangaId}`);
@@ -192,6 +250,140 @@ export default function EditMangaPage() {
           {t("uploadManga.description")}
           <MarkdownEditor value={description} onChange={setDescription} />
         </label>
+
+        <label>
+          {t("editManga.author")}
+          <input value={author} onChange={(e) => setAuthor(e.target.value)} />
+        </label>
+
+        <label>
+          {t("editManga.artist")}
+          <input value={artist} onChange={(e) => setArtist(e.target.value)} />
+        </label>
+
+        <div className="settings-row">
+          <span className="settings-label">{t("editManga.status")}</span>
+          <div className="settings-toggle-group">
+            {STATUS_OPTIONS.map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                className={status === opt ? "active" : ""}
+                onClick={() => setStatus(opt)}
+              >
+                {t(`status.${opt}`)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="settings-row">
+          <span className="settings-label">{t("editManga.alternativeTitles")}</span>
+          {alternativeTitles.length > 0 && (
+            <div className="alt-titles-list">
+              {alternativeTitles.map((altTitle, index) => (
+                <div className="alt-title-row" key={index}>
+                  <input
+                    value={altTitle}
+                    placeholder={t("editManga.alternativeTitlePlaceholder")}
+                    onChange={(e) => updateAlternativeTitle(index, e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="tag-chip-remove"
+                    onClick={() => removeAlternativeTitle(index)}
+                    aria-label={t("common.remove")}
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <button type="button" className="btn btn-ghost btn-sm" onClick={addAlternativeTitle}>
+            {t("editManga.addAlternativeTitle")}
+          </button>
+        </div>
+
+        <div className="settings-row">
+          <span className="settings-label">{t("editManga.readOrBuy")}</span>
+          {readOrBuyLinks.length > 0 && (
+            <div className="site-links-list">
+              {readOrBuyLinks.map((link, index) => (
+                <div className="site-link-row" key={index}>
+                  <SearchableSelect
+                    options={readOrBuySiteOptions}
+                    value={link.site_id}
+                    onChange={(value) => readOrBuyHandlers.update(index, "site_id", value)}
+                    placeholder={t("editManga.selectSite")}
+                    searchPlaceholder={t("editManga.searchSite")}
+                    emptyLabel={t("editManga.noSitesFound")}
+                  />
+                  <input
+                    value={link.url}
+                    placeholder={t("editManga.urlPlaceholder")}
+                    onChange={(e) => readOrBuyHandlers.update(index, "url", e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="tag-chip-remove"
+                    onClick={() => readOrBuyHandlers.remove(index)}
+                    aria-label={t("common.remove")}
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {readOrBuySiteOptions.length === 0 ? (
+            <p className="reorder-hint">{t("editManga.noSitesConfigured")}</p>
+          ) : (
+            <button type="button" className="btn btn-ghost btn-sm" onClick={readOrBuyHandlers.add}>
+              {t("editManga.addLink")}
+            </button>
+          )}
+        </div>
+
+        <div className="settings-row">
+          <span className="settings-label">{t("editManga.track")}</span>
+          {trackLinks.length > 0 && (
+            <div className="site-links-list">
+              {trackLinks.map((link, index) => (
+                <div className="site-link-row" key={index}>
+                  <SearchableSelect
+                    options={trackSiteOptions}
+                    value={link.site_id}
+                    onChange={(value) => trackHandlers.update(index, "site_id", value)}
+                    placeholder={t("editManga.selectSite")}
+                    searchPlaceholder={t("editManga.searchSite")}
+                    emptyLabel={t("editManga.noSitesFound")}
+                  />
+                  <input
+                    value={link.url}
+                    placeholder={t("editManga.urlPlaceholder")}
+                    onChange={(e) => trackHandlers.update(index, "url", e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="tag-chip-remove"
+                    onClick={() => trackHandlers.remove(index)}
+                    aria-label={t("common.remove")}
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {trackSiteOptions.length === 0 ? (
+            <p className="reorder-hint">{t("editManga.noSitesConfigured")}</p>
+          ) : (
+            <button type="button" className="btn btn-ghost btn-sm" onClick={trackHandlers.add}>
+              {t("editManga.addLink")}
+            </button>
+          )}
+        </div>
 
         {manga.work_type !== "novel" && (
           <div className="settings-row">

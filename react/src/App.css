@@ -961,6 +961,13 @@
   margin-bottom: 0;
 }
 
+/* Standalone, full-width block below the hero section (cover/title/buttons)
+   instead of squeezed into the narrow column beside the cover — plain text,
+   no card framing. */
+.manga-description-section {
+  margin-bottom: 32px;
+}
+
 .manga-tags {
   display: flex;
   flex-wrap: wrap;
@@ -1063,6 +1070,97 @@
   align-items: flex-start;
   width: 100%;
   max-width: 320px;
+}
+
+.manga-meta-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.manga-meta-row {
+  display: flex;
+  gap: 8px;
+}
+
+.manga-meta-label {
+  color: var(--text-muted);
+  min-width: 90px;
+  flex-shrink: 0;
+}
+
+.manga-site-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.site-links-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.site-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+  color: var(--text-h);
+  font-size: 13px;
+  font-weight: 500;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.site-link-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.site-link-btn img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  border-radius: 3px;
+}
+
+.site-link-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* Edit-page list editors for alternative titles and site links — each row
+   is delete-able, and site-link rows pair a SearchableSelect (site picker)
+   with the URL input. */
+.alt-titles-list,
+.site-links-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.alt-title-row,
+.site-link-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.alt-title-row input,
+.site-link-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.site-link-row .searchable-select {
+  flex: 1;
+  min-width: 0;
+  max-width: 220px;
 }
 
 .tag-manga-page h1 {
@@ -2626,6 +2724,29 @@ textarea.markdown-field {
 .tag-manage-edit-input {
   flex: 1;
   min-width: 160px;
+}
+
+.admin-link-sites-section {
+  margin-bottom: 32px;
+}
+
+.admin-link-sites-section .upload-form {
+  margin-bottom: 24px;
+}
+
+.link-site-icon-preview {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  border-radius: 4px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 24px;
+}
+
+.link-site-name {
+  flex: 1;
+  min-width: 120px;
 }
 
 .tag-color-row {

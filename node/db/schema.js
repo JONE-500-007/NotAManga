@@ -263,6 +263,61 @@ async function initSchema(pool) {
     );
     CREATE INDEX IF NOT EXISTS view_events_manga_viewed_idx ON view_events (manga_id, viewed_at);
     CREATE INDEX IF NOT EXISTS view_events_viewed_idx ON view_events (viewed_at);
+
+    -- Publication status (MangaDex-style vocabulary), plus the two credit
+    -- fields shown alongside it on the detail page. All optional/defaulted
+    -- so existing rows don't need backfilling.
+    ALTER TABLE manga ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'ongoing';
+    ALTER TABLE manga DROP CONSTRAINT IF EXISTS manga_status_check;
+    ALTER TABLE manga ADD CONSTRAINT manga_status_check
+      CHECK (status IN ('ongoing', 'completed', 'hiatus', 'cancelled'));
+    ALTER TABLE manga ADD COLUMN IF NOT EXISTS author TEXT;
+    ALTER TABLE manga ADD COLUMN IF NOT EXISTS artist TEXT;
+
+    -- Ordered list of alternate names (original-language title, regional
+    -- releases, etc.) shown under the main title.
+    CREATE TABLE IF NOT EXISTS manga_alternative_titles (
+      id SERIAL PRIMARY KEY,
+      manga_id INTEGER NOT NULL REFERENCES manga(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      position INTEGER NOT NULL,
+      UNIQUE (manga_id, position)
+    );
+
+    -- Admin-curated catalog of known "read or buy"/"track" sites (name +
+    -- uploaded icon), managed the same way as the global tags list —
+    -- uploaders pick from this list when linking their manga to a site
+    -- instead of typing a free-form name, so a spammy/misleading link can't
+    -- spoof a trusted site's identity.
+    CREATE TABLE IF NOT EXISTS link_sites (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      category TEXT NOT NULL CHECK (category IN ('read_or_buy', 'track')),
+      icon_path TEXT,
+      position INTEGER NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    ALTER TABLE link_sites DROP CONSTRAINT IF EXISTS link_sites_category_position_key;
+    ALTER TABLE link_sites ADD CONSTRAINT link_sites_category_position_key UNIQUE (category, position);
+
+    -- External links grouped into two rows of icon buttons on the detail
+    -- page: "Read or Buy" (official raw/translation, storefronts) and
+    -- "Track" (MyAnimeList, AniList, ...). category is denormalized from
+    -- site_id's own category at insert time (validated in
+    -- utils/mangaSites.js) purely so listing a manga's links doesn't need a
+    -- join with link_sites just to split them into the two sections.
+    CREATE TABLE IF NOT EXISTS manga_links (
+      id SERIAL PRIMARY KEY,
+      manga_id INTEGER NOT NULL REFERENCES manga(id) ON DELETE CASCADE,
+      category TEXT NOT NULL CHECK (category IN ('read_or_buy', 'track')),
+      url TEXT NOT NULL,
+      position INTEGER NOT NULL,
+      UNIQUE (manga_id, category, position)
+    );
+    ALTER TABLE manga_links ADD COLUMN IF NOT EXISTS site_id INTEGER REFERENCES link_sites(id) ON DELETE CASCADE;
+    ALTER TABLE manga_links ALTER COLUMN site_id SET NOT NULL;
+    ALTER TABLE manga_links DROP COLUMN IF EXISTS site_key;
+    ALTER TABLE manga_links DROP COLUMN IF EXISTS custom_label;
   `);
 }
 

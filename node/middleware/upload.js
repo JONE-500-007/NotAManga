@@ -11,6 +11,7 @@ const ART_DIR = path.join(UPLOADS_ROOT, "art");
 const AVATARS_DIR = path.join(UPLOADS_ROOT, "avatars");
 const BANNERS_DIR = path.join(UPLOADS_ROOT, "banners");
 const NOVEL_IMAGES_DIR = path.join(UPLOADS_ROOT, "novel-images");
+const LINK_SITE_ICONS_DIR = path.join(UPLOADS_ROOT, "link-site-icons");
 
 fs.mkdirSync(COVERS_DIR, { recursive: true });
 fs.mkdirSync(PAGES_DIR, { recursive: true });
@@ -18,6 +19,7 @@ fs.mkdirSync(ART_DIR, { recursive: true });
 fs.mkdirSync(AVATARS_DIR, { recursive: true });
 fs.mkdirSync(BANNERS_DIR, { recursive: true });
 fs.mkdirSync(NOVEL_IMAGES_DIR, { recursive: true });
+fs.mkdirSync(LINK_SITE_ICONS_DIR, { recursive: true });
 
 // Shipped alongside the app (not user-uploaded), served by users who haven't
 // picked their own avatar/banner yet. Never pass these through
@@ -48,6 +50,7 @@ const artUpload = multer({ ...memoryUploadOptions, limits: { fileSize: 10 * 1024
 const avatarUpload = multer({ ...memoryUploadOptions, limits: { fileSize: 10 * 1024 * 1024 } });
 const bannerUpload = multer({ ...memoryUploadOptions, limits: { fileSize: 10 * 1024 * 1024 } });
 const novelImageUpload = multer({ ...memoryUploadOptions, limits: { fileSize: 10 * 1024 * 1024, files: 100 } });
+const linkSiteIconUpload = multer({ ...memoryUploadOptions, limits: { fileSize: 2 * 1024 * 1024 } });
 const chapterPagesUpload = multer({ ...memoryUploadOptions, limits: { fileSize: 10 * 1024 * 1024, files: 300 } });
 
 // Validates a single in-memory upload (multer memoryStorage's file.buffer)
@@ -68,6 +71,7 @@ module.exports = {
   avatarUpload,
   bannerUpload,
   novelImageUpload,
+  linkSiteIconUpload,
   saveValidatedImage,
   COVERS_DIR,
   PAGES_DIR,
@@ -75,6 +79,7 @@ module.exports = {
   AVATARS_DIR,
   BANNERS_DIR,
   NOVEL_IMAGES_DIR,
+  LINK_SITE_ICONS_DIR,
   UPLOADS_ROOT,
   DEFAULT_AVATAR_PATH,
   DEFAULT_BANNER_PATH,

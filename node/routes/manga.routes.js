@@ -23,13 +23,73 @@ const { visibilityFilter, canViewManga } = require("../utils/mangaVisibility");
 const {
   assertBoundedNumber,
   assertMaxLength,
+  assertStatus,
+  assertStringArray,
   MAX_CHAPTER_NUMBER,
   MAX_VOLUME_NUMBER,
   MAX_TITLE_LENGTH,
   MAX_DESCRIPTION_LENGTH,
+  MAX_AUTHOR_LENGTH,
+  MAX_ARTIST_LENGTH,
+  MAX_ALTERNATIVE_TITLES,
+  MAX_ALTERNATIVE_TITLE_LENGTH,
 } = require("../utils/validation");
+const { validateAndNormalizeLinks } = require("../utils/mangaSites");
 
 const router = express.Router();
+
+// Replaces a manga's alternative-titles and links rows to match the
+// (already-validated) lists from the request — simplest to reason about
+// since the edit form always resubmits its full current lists rather than
+// diffing, same approach as novel_blocks on chapter edit.
+async function replaceMangaSideTables(client, mangaId, { alternativeTitles, links }) {
+  await client.query("DELETE FROM manga_alternative_titles WHERE manga_id = $1", [mangaId]);
+  for (let i = 0; i < alternativeTitles.length; i++) {
+    await client.query(
+      "INSERT INTO manga_alternative_titles (manga_id, title, position) VALUES ($1, $2, $3)",
+      [mangaId, alternativeTitles[i].trim(), i + 1]
+    );
+  }
+
+  await client.query("DELETE FROM manga_links WHERE manga_id = $1", [mangaId]);
+  const positionByCategory = {};
+  for (const link of links) {
+    const position = (positionByCategory[link.category] = (positionByCategory[link.category] || 0) + 1);
+    await client.query(
+      `INSERT INTO manga_links (manga_id, category, site_id, url, position)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [mangaId, link.category, link.site_id, link.url, position]
+    );
+  }
+}
+
+// Looked up before validating a links payload so validateAndNormalizeLinks
+// can confirm every site_id actually exists and matches its stated
+// category, without itself needing DB access.
+async function getSiteCategoryMap() {
+  const result = await pool.query("SELECT id, category FROM link_sites");
+  return new Map(result.rows.map((r) => [r.id, r.category]));
+}
+
+async function fetchMangaSideTables(mangaId) {
+  const [altTitlesResult, linksResult] = await Promise.all([
+    pool.query(
+      "SELECT title FROM manga_alternative_titles WHERE manga_id = $1 ORDER BY position ASC",
+      [mangaId]
+    ),
+    pool.query(
+      `SELECT ml.category, ml.url, ls.id AS site_id, ls.name AS site_name, ls.icon_path AS site_icon_path
+       FROM manga_links ml
+       JOIN link_sites ls ON ls.id = ml.site_id
+       WHERE ml.manga_id = $1 ORDER BY ml.category ASC, ml.position ASC`,
+      [mangaId]
+    ),
+  ]);
+  return {
+    alternative_titles: altTitlesResult.rows.map((r) => r.title),
+    links: linksResult.rows,
+  };
+}
 
 router.get("/manga", optionalAuth, async (req, res) => {
   // Pinned manga (admin-ordered) float to the front in the order the admin
@@ -108,19 +168,60 @@ router.delete("/manga/:mangaId/pin", requireAuth, requireRole("admin"), async (r
 });
 
 router.post("/manga", requireAuth, requireRole("uploader", "admin"), coverUpload.single("cover"), async (req, res) => {
-  const { title, description } = req.body;
+  const { title, description, author, artist } = req.body;
   if (!title) return res.status(400).json({ error: "Title is required" });
   assertMaxLength(title, { label: "Title", max: MAX_TITLE_LENGTH });
   assertMaxLength(description, { label: "Description", max: MAX_DESCRIPTION_LENGTH });
+  assertMaxLength(author, { label: "Author", max: MAX_AUTHOR_LENGTH });
+  assertMaxLength(artist, { label: "Artist", max: MAX_ARTIST_LENGTH });
+
+  const status = req.body.status || "ongoing";
+  assertStatus(status);
+
+  // alternative_titles/links arrive as JSON strings (multipart fields are
+  // flat text) — same pattern novel chapters use for their `blocks` field.
+  let alternativeTitles;
+  try {
+    alternativeTitles = req.body.alternative_titles ? JSON.parse(req.body.alternative_titles) : [];
+  } catch {
+    return res.status(400).json({ error: "Invalid alternative_titles" });
+  }
+  assertStringArray(alternativeTitles, {
+    label: "Alternative titles",
+    maxItems: MAX_ALTERNATIVE_TITLES,
+    maxItemLength: MAX_ALTERNATIVE_TITLE_LENGTH,
+  });
+
+  let rawLinks;
+  try {
+    rawLinks = req.body.links ? JSON.parse(req.body.links) : [];
+  } catch {
+    return res.status(400).json({ error: "Invalid links" });
+  }
+  const links = validateAndNormalizeLinks(rawLinks, await getSiteCategoryMap()) || [];
 
   const workType = req.body.work_type === "novel" ? "novel" : "manga";
   const format = req.body.format === "comic" ? "comic" : "manga";
   const coverPath = req.file ? `/uploads/covers/${await saveValidatedImage(req.file, COVERS_DIR)}` : null;
-  const result = await pool.query(
-    "INSERT INTO manga (title, description, cover_path, format, work_type, uploader_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
-    [title, description || null, coverPath, format, workType, req.user.id]
-  );
-  res.status(201).json(result.rows[0]);
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await client.query(
+      `INSERT INTO manga (title, description, cover_path, format, work_type, uploader_id, status, author, artist)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [title, description || null, coverPath, format, workType, req.user.id, status, author || null, artist || null]
+    );
+    const manga = result.rows[0];
+    await replaceMangaSideTables(client, manga.id, { alternativeTitles, links });
+    await client.query("COMMIT");
+    res.status(201).json({ ...manga, alternative_titles: alternativeTitles, links });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 });
 
 router.get("/manga/:mangaId", optionalAuth, async (req, res) => {
@@ -169,6 +270,8 @@ router.get("/manga/:mangaId", optionalAuth, async (req, res) => {
     userRating = userRatingResult.rows[0]?.rating ?? null;
   }
 
+  const { alternative_titles: alternativeTitles, links } = await fetchMangaSideTables(mangaId);
+
   res.json({
     ...manga,
     chapters: chaptersResult.rows,
@@ -177,6 +280,8 @@ router.get("/manga/:mangaId", optionalAuth, async (req, res) => {
     rating_average: Number(ratingResult.rows[0].average),
     rating_count: Number(ratingResult.rows[0].count),
     user_rating: userRating,
+    alternative_titles: alternativeTitles,
+    links,
   });
 });
 
@@ -377,10 +482,35 @@ router.patch(
   coverUpload.single("cover"),
   async (req, res) => {
     const { mangaId } = req.params;
-    const { title, description } = req.body;
+    const { title, description, author, artist } = req.body;
     if (!title) return res.status(400).json({ error: "Title is required" });
     assertMaxLength(title, { label: "Title", max: MAX_TITLE_LENGTH });
     assertMaxLength(description, { label: "Description", max: MAX_DESCRIPTION_LENGTH });
+    assertMaxLength(author, { label: "Author", max: MAX_AUTHOR_LENGTH });
+    assertMaxLength(artist, { label: "Artist", max: MAX_ARTIST_LENGTH });
+
+    const status = req.body.status || "ongoing";
+    assertStatus(status);
+
+    let alternativeTitles;
+    try {
+      alternativeTitles = req.body.alternative_titles ? JSON.parse(req.body.alternative_titles) : [];
+    } catch {
+      return res.status(400).json({ error: "Invalid alternative_titles" });
+    }
+    assertStringArray(alternativeTitles, {
+      label: "Alternative titles",
+      maxItems: MAX_ALTERNATIVE_TITLES,
+      maxItemLength: MAX_ALTERNATIVE_TITLE_LENGTH,
+    });
+
+    let rawLinks;
+    try {
+      rawLinks = req.body.links ? JSON.parse(req.body.links) : [];
+    } catch {
+      return res.status(400).json({ error: "Invalid links" });
+    }
+    const links = validateAndNormalizeLinks(rawLinks, await getSiteCategoryMap()) || [];
 
     const format = req.body.format === "comic" ? "comic" : "manga";
 
@@ -390,11 +520,26 @@ router.patch(
     }
 
     const coverPath = req.file ? `/uploads/covers/${await saveValidatedImage(req.file, COVERS_DIR)}` : undefined;
-    const result = await pool.query(
-      `UPDATE manga SET title = $1, description = $2, format = $3, cover_path = COALESCE($4, cover_path) WHERE id = $5 RETURNING *`,
-      [title, description || null, format, coverPath || null, mangaId]
-    );
-    res.json(result.rows[0]);
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const result = await client.query(
+        `UPDATE manga
+         SET title = $1, description = $2, format = $3, cover_path = COALESCE($4, cover_path),
+             status = $5, author = $6, artist = $7
+         WHERE id = $8 RETURNING *`,
+        [title, description || null, format, coverPath || null, status, author || null, artist || null, mangaId]
+      );
+      await replaceMangaSideTables(client, mangaId, { alternativeTitles, links });
+      await client.query("COMMIT");
+      res.json({ ...result.rows[0], alternative_titles: alternativeTitles, links });
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
   }
 );
 

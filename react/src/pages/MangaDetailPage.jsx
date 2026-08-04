@@ -8,6 +8,7 @@ import { renderInlineMarkdown, renderMarkdown } from "../utils/renderMarkdown";
 import ArtGallery from "../components/ArtGallery";
 import MangaRating from "../components/MangaRating";
 import AddToLibraryButton from "../components/AddToLibraryButton";
+import SiteLinkButton from "../components/SiteLinkButton";
 
 export default function MangaDetailPage() {
   const { mangaId } = useParams();
@@ -71,6 +72,10 @@ export default function MangaDetailPage() {
     await api.del(`/manga/${mangaId}/chapters/${chapterId}`);
     setChapters((current) => current.filter((c) => c.id !== chapterId));
   };
+
+  const links = manga.links || [];
+  const readOrBuyLinks = links.filter((l) => l.category === "read_or_buy");
+  const trackLinks = links.filter((l) => l.category === "track");
 
   const displayChapters = isOwner ? chapters : [...chapters].reverse();
   const hasVolumes = chapters.some((c) => c.volume != null);
@@ -207,12 +212,30 @@ export default function MangaDetailPage() {
             />
           </div>
 
-          {manga.description && (
-            <div
-              className="manga-description"
-              dangerouslySetInnerHTML={{ __html: renderMarkdown(manga.description) }}
-            />
-          )}
+          <div className="manga-meta-list">
+            <div className="manga-meta-row">
+              <span className="manga-meta-label">{t("detail.statusLabel")}</span>
+              <span>{t(`status.${manga.status}`)}</span>
+            </div>
+            {manga.author && (
+              <div className="manga-meta-row">
+                <span className="manga-meta-label">{t("detail.authorLabel")}</span>
+                <span>{manga.author}</span>
+              </div>
+            )}
+            {manga.artist && (
+              <div className="manga-meta-row">
+                <span className="manga-meta-label">{t("detail.artistLabel")}</span>
+                <span>{manga.artist}</span>
+              </div>
+            )}
+            {manga.alternative_titles?.length > 0 && (
+              <div className="manga-meta-row">
+                <span className="manga-meta-label">{t("detail.alternativeLabel")}</span>
+                <span>{manga.alternative_titles.join(", ")}</span>
+              </div>
+            )}
+          </div>
 
           {tags.length > 0 && (
             <div className="manga-tags">
@@ -225,6 +248,28 @@ export default function MangaDetailPage() {
                   dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(tg.name) }}
                 />
               ))}
+            </div>
+          )}
+
+          {readOrBuyLinks.length > 0 && (
+            <div className="manga-site-links">
+              <span className="settings-label">{t("detail.readOrBuy")}</span>
+              <div className="site-links-row">
+                {readOrBuyLinks.map((link, i) => (
+                  <SiteLinkButton key={i} link={link} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {trackLinks.length > 0 && (
+            <div className="manga-site-links">
+              <span className="settings-label">{t("detail.track")}</span>
+              <div className="site-links-row">
+                {trackLinks.map((link, i) => (
+                  <SiteLinkButton key={i} link={link} />
+                ))}
+              </div>
             </div>
           )}
 
@@ -247,6 +292,13 @@ export default function MangaDetailPage() {
           </div>
         </div>
       </div>
+
+      {manga.description && (
+        <div
+          className="manga-description manga-description-section"
+          dangerouslySetInnerHTML={{ __html: renderMarkdown(manga.description) }}
+        />
+      )}
 
       <div className="detail-tabs">
         <button

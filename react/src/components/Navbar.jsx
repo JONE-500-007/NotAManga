@@ -84,6 +84,9 @@ export default function Navbar() {
                     <Link to="/admin/tags" className="admin-menu-item" onClick={() => setAdminMenuOpen(false)}>
                       {t("nav.adminTags")}
                     </Link>
+                    <Link to="/admin/link-sites" className="admin-menu-item" onClick={() => setAdminMenuOpen(false)}>
+                      {t("nav.adminLinkSites")}
+                    </Link>
                   </div>
                 )}
               </div>
@@ -172,6 +175,9 @@ export default function Navbar() {
                     </Link>
                     <Link to="/admin/tags" className="btn btn-ghost" onClick={closeMenu}>
                       {t("nav.adminTags")}
+                    </Link>
+                    <Link to="/admin/link-sites" className="btn btn-ghost" onClick={closeMenu}>
+                      {t("nav.adminLinkSites")}
                     </Link>
                   </div>
                 )}
