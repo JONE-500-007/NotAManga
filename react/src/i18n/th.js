@@ -251,6 +251,7 @@ export default {
   "editManga.searchSite": "ค้นหาเว็บไซต์...",
   "editManga.noSitesFound": "ไม่พบเว็บไซต์",
   "editManga.noSitesConfigured": "ยังไม่มีเว็บไซต์ในหมวดนี้ — ให้แอดมินเพิ่มก่อน",
+  "editManga.linksReorderHint": "ใช้ปุ่มลูกศรเพื่อจัดลำดับ",
   "editManga.tags": "แท็ก",
   "editManga.tagsReorderHint": "ลากแท็ก หรือใช้ปุ่มลูกศรเพื่อจัดลำดับ",
   "editManga.submit": "บันทึกการแก้ไข",

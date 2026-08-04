@@ -67,6 +67,22 @@ export default function EditMangaPage() {
     onCommit: (orderedTagIds) => api.patch(`/manga/${mangaId}/tags/reorder`, { orderedTagIds }),
   });
 
+  // Drag reorder for these two only touches local draft state (no per-drop
+  // API call like the tags list above has) — the new order is just
+  // whatever gets submitted with the rest of the form, so onCommit is a
+  // no-op. Declared here (before the early returns below) since hooks can't
+  // be called conditionally.
+  const readOrBuyDrag = useDragReorder({
+    items: readOrBuyLinks,
+    setItems: setReadOrBuyLinks,
+    onCommit: () => {},
+  });
+  const trackDrag = useDragReorder({
+    items: trackLinks,
+    setItems: setTrackLinks,
+    onCommit: () => {},
+  });
+
   useEffect(() => {
     if (!lightboxOpen) return;
     const handleKey = (e) => {
@@ -98,7 +114,15 @@ export default function EditMangaPage() {
       // Only site_id/url are edited here — site_name/site_icon_path are
       // display-only fields the detail page uses, resolved fresh from
       // linkSites on every render instead of being carried in this state.
-      const links = (data.links || []).map((l) => ({ site_id: l.site_id, url: l.url, category: l.category }));
+      // `id` is a client-only key so drag-reorder (useDragReorder) can track
+      // rows; it's harmless if it rides along in the submit payload since
+      // the backend only reads category/site_id/url off each link.
+      const links = (data.links || []).map((l) => ({
+        id: crypto.randomUUID(),
+        site_id: l.site_id,
+        url: l.url,
+        category: l.category,
+      }));
       setReadOrBuyLinks(links.filter((l) => l.category === "read_or_buy"));
       setTrackLinks(links.filter((l) => l.category === "track"));
     });
@@ -175,20 +199,29 @@ export default function EditMangaPage() {
   function makeLinkListHandlers(setLinks, category) {
     const firstSiteId = linkSites.find((s) => s.category === category)?.id ?? "";
     return {
-      add: () => setLinks((current) => [...current, { site_id: firstSiteId, url: "" }]),
+      add: () => setLinks((current) => [...current, { id: crypto.randomUUID(), site_id: firstSiteId, url: "" }]),
       update: (index, field, value) =>
         setLinks((current) => current.map((l, i) => (i === index ? { ...l, [field]: value } : l))),
       remove: (index) => setLinks((current) => current.filter((_, i) => i !== index)),
+      move: (index, offset) =>
+        setLinks((current) => {
+          const newIndex = index + offset;
+          if (newIndex < 0 || newIndex >= current.length) return current;
+          const updated = [...current];
+          const [item] = updated.splice(index, 1);
+          updated.splice(newIndex, 0, item);
+          return updated;
+        }),
     };
   }
   const readOrBuyHandlers = makeLinkListHandlers(setReadOrBuyLinks, "read_or_buy");
   const trackHandlers = makeLinkListHandlers(setTrackLinks, "track");
   const readOrBuySiteOptions = linkSites
     .filter((s) => s.category === "read_or_buy")
-    .map((s) => ({ value: s.id, label: s.name }));
+    .map((s) => ({ value: s.id, label: s.name, icon: s.icon_path }));
   const trackSiteOptions = linkSites
     .filter((s) => s.category === "track")
-    .map((s) => ({ value: s.id, label: s.name }));
+    .map((s) => ({ value: s.id, label: s.name, icon: s.icon_path }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -307,10 +340,27 @@ export default function EditMangaPage() {
 
         <div className="settings-row">
           <span className="settings-label">{t("editManga.readOrBuy")}</span>
+          {readOrBuyLinks.length > 1 && <p className="reorder-hint">{t("editManga.linksReorderHint")}</p>}
           {readOrBuyLinks.length > 0 && (
             <div className="site-links-list">
               {readOrBuyLinks.map((link, index) => (
-                <div className="site-link-row" key={index}>
+                <div
+                  className={`site-link-row${readOrBuyDrag.draggingId === link.id ? " site-link-row-dragging" : ""}`}
+                  key={link.id}
+                  draggable={readOrBuyDrag.dragArmed}
+                  onDragStart={readOrBuyDrag.handleDragStart(link.id)}
+                  onDragOver={readOrBuyDrag.handleDragOver(link.id)}
+                  onDrop={readOrBuyDrag.handleDrop}
+                  onDragEnd={readOrBuyDrag.disarmDrag}
+                >
+                  <span
+                    className="drag-handle material-symbols-outlined"
+                    onMouseDown={readOrBuyDrag.armDrag}
+                    onMouseUp={readOrBuyDrag.disarmDrag}
+                    aria-hidden="true"
+                  >
+                    drag_indicator
+                  </span>
                   <SearchableSelect
                     options={readOrBuySiteOptions}
                     value={link.site_id}
@@ -324,6 +374,24 @@ export default function EditMangaPage() {
                     placeholder={t("editManga.urlPlaceholder")}
                     onChange={(e) => readOrBuyHandlers.update(index, "url", e.target.value)}
                   />
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    onClick={() => readOrBuyHandlers.move(index, -1)}
+                    disabled={index === 0}
+                    aria-label={t("common.moveUp")}
+                  >
+                    &uarr;
+                  </button>
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    onClick={() => readOrBuyHandlers.move(index, 1)}
+                    disabled={index === readOrBuyLinks.length - 1}
+                    aria-label={t("common.moveDown")}
+                  >
+                    &darr;
+                  </button>
                   <button
                     type="button"
                     className="tag-chip-remove"
@@ -347,10 +415,27 @@ export default function EditMangaPage() {
 
         <div className="settings-row">
           <span className="settings-label">{t("editManga.track")}</span>
+          {trackLinks.length > 1 && <p className="reorder-hint">{t("editManga.linksReorderHint")}</p>}
           {trackLinks.length > 0 && (
             <div className="site-links-list">
               {trackLinks.map((link, index) => (
-                <div className="site-link-row" key={index}>
+                <div
+                  className={`site-link-row${trackDrag.draggingId === link.id ? " site-link-row-dragging" : ""}`}
+                  key={link.id}
+                  draggable={trackDrag.dragArmed}
+                  onDragStart={trackDrag.handleDragStart(link.id)}
+                  onDragOver={trackDrag.handleDragOver(link.id)}
+                  onDrop={trackDrag.handleDrop}
+                  onDragEnd={trackDrag.disarmDrag}
+                >
+                  <span
+                    className="drag-handle material-symbols-outlined"
+                    onMouseDown={trackDrag.armDrag}
+                    onMouseUp={trackDrag.disarmDrag}
+                    aria-hidden="true"
+                  >
+                    drag_indicator
+                  </span>
                   <SearchableSelect
                     options={trackSiteOptions}
                     value={link.site_id}
@@ -364,6 +449,24 @@ export default function EditMangaPage() {
                     placeholder={t("editManga.urlPlaceholder")}
                     onChange={(e) => trackHandlers.update(index, "url", e.target.value)}
                   />
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    onClick={() => trackHandlers.move(index, -1)}
+                    disabled={index === 0}
+                    aria-label={t("common.moveUp")}
+                  >
+                    &uarr;
+                  </button>
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    onClick={() => trackHandlers.move(index, 1)}
+                    disabled={index === trackLinks.length - 1}
+                    aria-label={t("common.moveDown")}
+                  >
+                    &darr;
+                  </button>
                   <button
                     type="button"
                     className="tag-chip-remove"

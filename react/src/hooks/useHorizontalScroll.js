@@ -28,6 +28,13 @@ export function useHorizontalScroll() {
     // page from scrolling vertically while redirecting the delta here.
     const onWheel = (e) => {
       if (e.deltaY === 0) return;
+      // Once the shelf is already scrolled all the way in the direction
+      // the wheel is going, don't swallow the event — let it fall through
+      // to the page's normal vertical scroll instead of trapping the wheel
+      // uselessly at the edge.
+      const atStart = el.scrollLeft <= 0;
+      const atEnd = el.scrollLeft >= el.scrollWidth - el.clientWidth - 1;
+      if ((e.deltaY < 0 && atStart) || (e.deltaY > 0 && atEnd)) return;
       el.scrollBy({ left: e.deltaY, behavior: "smooth" });
       e.preventDefault();
     };

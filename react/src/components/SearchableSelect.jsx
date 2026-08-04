@@ -1,5 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 
+// Only rendered for options that actually carry an `icon` field (e.g. the
+// Read-or-Buy/Track site pickers) — options without one (tags, category
+// order, ...) render nothing, unchanged from before icons existed here. A
+// present-but-empty icon (a site with no icon uploaded yet) falls back to a
+// generic link glyph, same convention as SiteLinkButton.
+function OptionIcon({ icon }) {
+  if (icon === undefined) return null;
+  return icon ? (
+    <img src={icon} alt="" className="searchable-select-option-icon" />
+  ) : (
+    <span className="material-symbols-outlined searchable-select-option-icon" aria-hidden="true">
+      link
+    </span>
+  );
+}
+
 export default function SearchableSelect({ options, value, onChange, placeholder, searchPlaceholder, emptyLabel }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -42,7 +58,8 @@ export default function SearchableSelect({ options, value, onChange, placeholder
         onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
         aria-expanded={open}
       >
-        <span className={selected ? "" : "searchable-select-placeholder"}>
+        <span className={`searchable-select-value${selected ? "" : " searchable-select-placeholder"}`}>
+          {selected && <OptionIcon icon={selected.icon} />}
           {selected ? selected.label : placeholder}
         </span>
         <span className={`searchable-select-chevron${open ? " open" : ""}`}>&#9662;</span>
@@ -70,6 +87,7 @@ export default function SearchableSelect({ options, value, onChange, placeholder
                   className={`searchable-select-option${String(o.value) === String(value) ? " active" : ""}`}
                   onClick={() => handleSelect(o.value)}
                 >
+                  <OptionIcon icon={o.icon} />
                   {o.label}
                 </button>
               ))

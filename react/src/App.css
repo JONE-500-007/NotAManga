@@ -1147,6 +1147,7 @@
 .alt-title-row,
 .site-link-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
 }
@@ -1154,13 +1155,17 @@
 .alt-title-row input,
 .site-link-row input {
   flex: 1;
-  min-width: 0;
+  min-width: 160px;
 }
 
 .site-link-row .searchable-select {
   flex: 1;
   min-width: 0;
   max-width: 220px;
+}
+
+.site-link-row-dragging {
+  opacity: 0.5;
 }
 
 .tag-manga-page h1 {
@@ -2886,8 +2891,28 @@ textarea.markdown-field {
   border-color: var(--accent);
 }
 
+.searchable-select-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .searchable-select-placeholder {
   color: var(--text-muted);
+}
+
+.searchable-select-option-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  border-radius: 3px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 18px;
 }
 
 .searchable-select-chevron {
@@ -2934,7 +2959,9 @@ textarea.markdown-field {
 }
 
 .searchable-select-option {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
   text-align: left;
   background: transparent;

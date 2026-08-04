@@ -251,6 +251,7 @@ export default {
   "editManga.searchSite": "Search sites...",
   "editManga.noSitesFound": "No sites found.",
   "editManga.noSitesConfigured": "No sites set up for this yet — ask an admin to add some first.",
+  "editManga.linksReorderHint": "Use the arrows to reorder",
   "editManga.tags": "Tags",
   "editManga.tagsReorderHint": "Drag tags or use the arrows to reorder",
   "editManga.submit": "Save changes",
