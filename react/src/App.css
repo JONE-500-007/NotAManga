@@ -1081,7 +1081,13 @@
 
 .manga-meta-row {
   display: flex;
+  align-items: flex-start;
   gap: 8px;
+}
+
+.manga-meta-value-list {
+  display: flex;
+  flex-direction: column;
 }
 
 .manga-meta-label {
@@ -1164,7 +1170,8 @@
   max-width: 220px;
 }
 
-.site-link-row-dragging {
+.site-link-row-dragging,
+.alt-title-row-dragging {
   opacity: 0.5;
 }
 

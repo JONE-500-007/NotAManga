@@ -8,6 +8,7 @@ import UploadProgressBar from "../components/UploadProgressBar";
 import MarkdownEditor from "../components/MarkdownEditor";
 import SelectedFilePreview from "../components/SelectedFilePreview";
 import SearchableSelect from "../components/SearchableSelect";
+import StringListEditor from "../components/StringListEditor";
 import { renderInlineMarkdown, markdownToPlainText } from "../utils/renderMarkdown";
 
 const STATUS_OPTIONS = ["ongoing", "completed", "hiatus", "cancelled"];
@@ -46,8 +47,8 @@ export default function EditMangaPage() {
   const [visibilitySaving, setVisibilitySaving] = useState(false);
   const [visibilityError, setVisibilityError] = useState("");
   const [status, setStatus] = useState("ongoing");
-  const [author, setAuthor] = useState("");
-  const [artist, setArtist] = useState("");
+  const [authors, setAuthors] = useState([]);
+  const [artists, setArtists] = useState([]);
   const [alternativeTitles, setAlternativeTitles] = useState([]);
   const [readOrBuyLinks, setReadOrBuyLinks] = useState([]);
   const [trackLinks, setTrackLinks] = useState([]);
@@ -67,11 +68,11 @@ export default function EditMangaPage() {
     onCommit: (orderedTagIds) => api.patch(`/manga/${mangaId}/tags/reorder`, { orderedTagIds }),
   });
 
-  // Drag reorder for these two only touches local draft state (no per-drop
-  // API call like the tags list above has) — the new order is just
-  // whatever gets submitted with the rest of the form, so onCommit is a
-  // no-op. Declared here (before the early returns below) since hooks can't
-  // be called conditionally.
+  // Drag reorder for all of these only touches local draft state (no
+  // per-drop API call like the tags list above has) — the new order is
+  // just whatever gets submitted with the rest of the form, so onCommit is
+  // a no-op. Declared here (before the early returns below) since hooks
+  // can't be called conditionally.
   const readOrBuyDrag = useDragReorder({
     items: readOrBuyLinks,
     setItems: setReadOrBuyLinks,
@@ -80,6 +81,21 @@ export default function EditMangaPage() {
   const trackDrag = useDragReorder({
     items: trackLinks,
     setItems: setTrackLinks,
+    onCommit: () => {},
+  });
+  const altTitlesDrag = useDragReorder({
+    items: alternativeTitles,
+    setItems: setAlternativeTitles,
+    onCommit: () => {},
+  });
+  const authorsDrag = useDragReorder({
+    items: authors,
+    setItems: setAuthors,
+    onCommit: () => {},
+  });
+  const artistsDrag = useDragReorder({
+    items: artists,
+    setItems: setArtists,
     onCommit: () => {},
   });
 
@@ -108,9 +124,13 @@ export default function EditMangaPage() {
       setVisibleRoles(data.visible_roles || []);
       setPrivacyLocked(data.privacy_locked_by_admin);
       setStatus(data.status || "ongoing");
-      setAuthor(data.author || "");
-      setArtist(data.artist || "");
-      setAlternativeTitles(data.alternative_titles || []);
+      // `id` on each entry is a client-only key so drag-reorder
+      // (useDragReorder) can track rows; harmless if it rides along in the
+      // submit payload since the backend only reads the trimmed string.
+      const toListItems = (values) => (values || []).map((value) => ({ id: crypto.randomUUID(), value }));
+      setAuthors(toListItems(data.authors));
+      setArtists(toListItems(data.artists));
+      setAlternativeTitles(toListItems(data.alternative_titles));
       // Only site_id/url are edited here — site_name/site_icon_path are
       // display-only fields the detail page uses, resolved fresh from
       // linkSites on every render instead of being carried in this state.
@@ -188,11 +208,28 @@ export default function EditMangaPage() {
     setIsPrivate(updated.is_private);
   };
 
-  const addAlternativeTitle = () => setAlternativeTitles((current) => [...current, ""]);
-  const updateAlternativeTitle = (index, value) =>
-    setAlternativeTitles((current) => current.map((t2, i) => (i === index ? value : t2)));
-  const removeAlternativeTitle = (index) =>
-    setAlternativeTitles((current) => current.filter((_, i) => i !== index));
+  // Shared by Alternative Titles, Author(s) and Artist(s) — each is just an
+  // ordered list of plain strings, edited/reordered the same way.
+  function makeStringListHandlers(setList) {
+    return {
+      add: () => setList((current) => [...current, { id: crypto.randomUUID(), value: "" }]),
+      update: (index, value) =>
+        setList((current) => current.map((item, i) => (i === index ? { ...item, value } : item))),
+      remove: (index) => setList((current) => current.filter((_, i) => i !== index)),
+      move: (index, offset) =>
+        setList((current) => {
+          const newIndex = index + offset;
+          if (newIndex < 0 || newIndex >= current.length) return current;
+          const updated = [...current];
+          const [item] = updated.splice(index, 1);
+          updated.splice(newIndex, 0, item);
+          return updated;
+        }),
+    };
+  }
+  const altTitleHandlers = makeStringListHandlers(setAlternativeTitles);
+  const authorHandlers = makeStringListHandlers(setAuthors);
+  const artistHandlers = makeStringListHandlers(setArtists);
 
   // Shared by the Read-or-Buy and Track sections — each keeps its own list
   // in state, only tagged with its category when the form actually submits.
@@ -234,12 +271,10 @@ export default function EditMangaPage() {
       formData.append("description", description);
       formData.append("format", format);
       formData.append("status", status);
-      formData.append("author", author);
-      formData.append("artist", artist);
-      formData.append(
-        "alternative_titles",
-        JSON.stringify(alternativeTitles.map((t2) => t2.trim()).filter(Boolean))
-      );
+      const toStringArray = (items) => items.map((item) => item.value.trim()).filter(Boolean);
+      formData.append("authors", JSON.stringify(toStringArray(authors)));
+      formData.append("artists", JSON.stringify(toStringArray(artists)));
+      formData.append("alternative_titles", JSON.stringify(toStringArray(alternativeTitles)));
       const links = [
         ...readOrBuyLinks.map((l) => ({ ...l, category: "read_or_buy" })),
         ...trackLinks.map((l) => ({ ...l, category: "track" })),
@@ -284,16 +319,6 @@ export default function EditMangaPage() {
           <MarkdownEditor value={description} onChange={setDescription} />
         </label>
 
-        <label>
-          {t("editManga.author")}
-          <input value={author} onChange={(e) => setAuthor(e.target.value)} />
-        </label>
-
-        <label>
-          {t("editManga.artist")}
-          <input value={artist} onChange={(e) => setArtist(e.target.value)} />
-        </label>
-
         <div className="settings-row">
           <span className="settings-label">{t("editManga.status")}</span>
           <div className="settings-toggle-group">
@@ -310,33 +335,32 @@ export default function EditMangaPage() {
           </div>
         </div>
 
-        <div className="settings-row">
-          <span className="settings-label">{t("editManga.alternativeTitles")}</span>
-          {alternativeTitles.length > 0 && (
-            <div className="alt-titles-list">
-              {alternativeTitles.map((altTitle, index) => (
-                <div className="alt-title-row" key={index}>
-                  <input
-                    value={altTitle}
-                    placeholder={t("editManga.alternativeTitlePlaceholder")}
-                    onChange={(e) => updateAlternativeTitle(index, e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    className="tag-chip-remove"
-                    onClick={() => removeAlternativeTitle(index)}
-                    aria-label={t("common.remove")}
-                  >
-                    &times;
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-          <button type="button" className="btn btn-ghost btn-sm" onClick={addAlternativeTitle}>
-            {t("editManga.addAlternativeTitle")}
-          </button>
-        </div>
+        <StringListEditor
+          label={t("editManga.author")}
+          items={authors}
+          handlers={authorHandlers}
+          drag={authorsDrag}
+          placeholder={t("editManga.authorPlaceholder")}
+          addLabel={t("editManga.addAuthor")}
+        />
+
+        <StringListEditor
+          label={t("editManga.artist")}
+          items={artists}
+          handlers={artistHandlers}
+          drag={artistsDrag}
+          placeholder={t("editManga.artistPlaceholder")}
+          addLabel={t("editManga.addArtist")}
+        />
+
+        <StringListEditor
+          label={t("editManga.alternativeTitles")}
+          items={alternativeTitles}
+          handlers={altTitleHandlers}
+          drag={altTitlesDrag}
+          placeholder={t("editManga.alternativeTitlePlaceholder")}
+          addLabel={t("editManga.addAlternativeTitle")}
+        />
 
         <div className="settings-row">
           <span className="settings-label">{t("editManga.readOrBuy")}</span>

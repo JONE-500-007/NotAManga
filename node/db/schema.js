@@ -264,15 +264,12 @@ async function initSchema(pool) {
     CREATE INDEX IF NOT EXISTS view_events_manga_viewed_idx ON view_events (manga_id, viewed_at);
     CREATE INDEX IF NOT EXISTS view_events_viewed_idx ON view_events (viewed_at);
 
-    -- Publication status (MangaDex-style vocabulary), plus the two credit
-    -- fields shown alongside it on the detail page. All optional/defaulted
-    -- so existing rows don't need backfilling.
+    -- Publication status (MangaDex-style vocabulary). Optional/defaulted so
+    -- existing rows don't need backfilling.
     ALTER TABLE manga ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'ongoing';
     ALTER TABLE manga DROP CONSTRAINT IF EXISTS manga_status_check;
     ALTER TABLE manga ADD CONSTRAINT manga_status_check
       CHECK (status IN ('ongoing', 'completed', 'hiatus', 'cancelled'));
-    ALTER TABLE manga ADD COLUMN IF NOT EXISTS author TEXT;
-    ALTER TABLE manga ADD COLUMN IF NOT EXISTS artist TEXT;
 
     -- Ordered list of alternate names (original-language title, regional
     -- releases, etc.) shown under the main title.
@@ -283,6 +280,38 @@ async function initSchema(pool) {
       position INTEGER NOT NULL,
       UNIQUE (manga_id, position)
     );
+
+    -- Author(s)/artist(s) credits — a manga can have more than one of
+    -- either, so both are an ordered list (kind distinguishes which) rather
+    -- than a single text field.
+    CREATE TABLE IF NOT EXISTS manga_credits (
+      id SERIAL PRIMARY KEY,
+      manga_id INTEGER NOT NULL REFERENCES manga(id) ON DELETE CASCADE,
+      kind TEXT NOT NULL CHECK (kind IN ('author', 'artist')),
+      name TEXT NOT NULL,
+      position INTEGER NOT NULL,
+      UNIQUE (manga_id, kind, position)
+    );
+
+    -- One-time migration from the original single author/artist TEXT
+    -- columns (each manga's existing value becomes credit #1) — guarded so
+    -- it only ever runs once, since the columns it reads are dropped right
+    -- after. Re-running this block on a DB that's already past it is a
+    -- no-op because the IF condition is false (the columns are gone).
+    DO $mig$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'manga' AND column_name = 'author'
+      ) THEN
+        INSERT INTO manga_credits (manga_id, kind, name, position)
+        SELECT id, 'author', author, 1 FROM manga WHERE author IS NOT NULL AND TRIM(author) <> '';
+        INSERT INTO manga_credits (manga_id, kind, name, position)
+        SELECT id, 'artist', artist, 1 FROM manga WHERE artist IS NOT NULL AND TRIM(artist) <> '';
+        ALTER TABLE manga DROP COLUMN author;
+        ALTER TABLE manga DROP COLUMN artist;
+      END IF;
+    END $mig$;
 
     -- Admin-curated catalog of known "read or buy"/"track" sites (name +
     -- uploaded icon), managed the same way as the global tags list —

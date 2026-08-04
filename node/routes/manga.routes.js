@@ -31,6 +31,8 @@ const {
   MAX_DESCRIPTION_LENGTH,
   MAX_AUTHOR_LENGTH,
   MAX_ARTIST_LENGTH,
+  MAX_AUTHORS,
+  MAX_ARTISTS,
   MAX_ALTERNATIVE_TITLES,
   MAX_ALTERNATIVE_TITLE_LENGTH,
 } = require("../utils/validation");
@@ -42,12 +44,26 @@ const router = express.Router();
 // (already-validated) lists from the request — simplest to reason about
 // since the edit form always resubmits its full current lists rather than
 // diffing, same approach as novel_blocks on chapter edit.
-async function replaceMangaSideTables(client, mangaId, { alternativeTitles, links }) {
+async function replaceMangaSideTables(client, mangaId, { alternativeTitles, authors, artists, links }) {
   await client.query("DELETE FROM manga_alternative_titles WHERE manga_id = $1", [mangaId]);
   for (let i = 0; i < alternativeTitles.length; i++) {
     await client.query(
       "INSERT INTO manga_alternative_titles (manga_id, title, position) VALUES ($1, $2, $3)",
       [mangaId, alternativeTitles[i].trim(), i + 1]
+    );
+  }
+
+  await client.query("DELETE FROM manga_credits WHERE manga_id = $1", [mangaId]);
+  for (let i = 0; i < authors.length; i++) {
+    await client.query(
+      "INSERT INTO manga_credits (manga_id, kind, name, position) VALUES ($1, 'author', $2, $3)",
+      [mangaId, authors[i].trim(), i + 1]
+    );
+  }
+  for (let i = 0; i < artists.length; i++) {
+    await client.query(
+      "INSERT INTO manga_credits (manga_id, kind, name, position) VALUES ($1, 'artist', $2, $3)",
+      [mangaId, artists[i].trim(), i + 1]
     );
   }
 
@@ -72,9 +88,13 @@ async function getSiteCategoryMap() {
 }
 
 async function fetchMangaSideTables(mangaId) {
-  const [altTitlesResult, linksResult] = await Promise.all([
+  const [altTitlesResult, creditsResult, linksResult] = await Promise.all([
     pool.query(
       "SELECT title FROM manga_alternative_titles WHERE manga_id = $1 ORDER BY position ASC",
+      [mangaId]
+    ),
+    pool.query(
+      "SELECT kind, name FROM manga_credits WHERE manga_id = $1 ORDER BY kind ASC, position ASC",
       [mangaId]
     ),
     pool.query(
@@ -87,6 +107,8 @@ async function fetchMangaSideTables(mangaId) {
   ]);
   return {
     alternative_titles: altTitlesResult.rows.map((r) => r.title),
+    authors: creditsResult.rows.filter((r) => r.kind === "author").map((r) => r.name),
+    artists: creditsResult.rows.filter((r) => r.kind === "artist").map((r) => r.name),
     links: linksResult.rows,
   };
 }
@@ -168,18 +190,17 @@ router.delete("/manga/:mangaId/pin", requireAuth, requireRole("admin"), async (r
 });
 
 router.post("/manga", requireAuth, requireRole("uploader", "admin"), coverUpload.single("cover"), async (req, res) => {
-  const { title, description, author, artist } = req.body;
+  const { title, description } = req.body;
   if (!title) return res.status(400).json({ error: "Title is required" });
   assertMaxLength(title, { label: "Title", max: MAX_TITLE_LENGTH });
   assertMaxLength(description, { label: "Description", max: MAX_DESCRIPTION_LENGTH });
-  assertMaxLength(author, { label: "Author", max: MAX_AUTHOR_LENGTH });
-  assertMaxLength(artist, { label: "Artist", max: MAX_ARTIST_LENGTH });
 
   const status = req.body.status || "ongoing";
   assertStatus(status);
 
-  // alternative_titles/links arrive as JSON strings (multipart fields are
-  // flat text) — same pattern novel chapters use for their `blocks` field.
+  // alternative_titles/authors/artists/links arrive as JSON strings
+  // (multipart fields are flat text) — same pattern novel chapters use for
+  // their `blocks` field.
   let alternativeTitles;
   try {
     alternativeTitles = req.body.alternative_titles ? JSON.parse(req.body.alternative_titles) : [];
@@ -191,6 +212,22 @@ router.post("/manga", requireAuth, requireRole("uploader", "admin"), coverUpload
     maxItems: MAX_ALTERNATIVE_TITLES,
     maxItemLength: MAX_ALTERNATIVE_TITLE_LENGTH,
   });
+
+  let authors;
+  try {
+    authors = req.body.authors ? JSON.parse(req.body.authors) : [];
+  } catch {
+    return res.status(400).json({ error: "Invalid authors" });
+  }
+  assertStringArray(authors, { label: "Authors", maxItems: MAX_AUTHORS, maxItemLength: MAX_AUTHOR_LENGTH });
+
+  let artists;
+  try {
+    artists = req.body.artists ? JSON.parse(req.body.artists) : [];
+  } catch {
+    return res.status(400).json({ error: "Invalid artists" });
+  }
+  assertStringArray(artists, { label: "Artists", maxItems: MAX_ARTISTS, maxItemLength: MAX_ARTIST_LENGTH });
 
   let rawLinks;
   try {
@@ -208,14 +245,14 @@ router.post("/manga", requireAuth, requireRole("uploader", "admin"), coverUpload
   try {
     await client.query("BEGIN");
     const result = await client.query(
-      `INSERT INTO manga (title, description, cover_path, format, work_type, uploader_id, status, author, artist)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [title, description || null, coverPath, format, workType, req.user.id, status, author || null, artist || null]
+      `INSERT INTO manga (title, description, cover_path, format, work_type, uploader_id, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [title, description || null, coverPath, format, workType, req.user.id, status]
     );
     const manga = result.rows[0];
-    await replaceMangaSideTables(client, manga.id, { alternativeTitles, links });
+    await replaceMangaSideTables(client, manga.id, { alternativeTitles, authors, artists, links });
     await client.query("COMMIT");
-    res.status(201).json({ ...manga, alternative_titles: alternativeTitles, links });
+    res.status(201).json({ ...manga, alternative_titles: alternativeTitles, authors, artists, links });
   } catch (err) {
     await client.query("ROLLBACK");
     throw err;
@@ -270,7 +307,7 @@ router.get("/manga/:mangaId", optionalAuth, async (req, res) => {
     userRating = userRatingResult.rows[0]?.rating ?? null;
   }
 
-  const { alternative_titles: alternativeTitles, links } = await fetchMangaSideTables(mangaId);
+  const { alternative_titles: alternativeTitles, authors, artists, links } = await fetchMangaSideTables(mangaId);
 
   res.json({
     ...manga,
@@ -281,6 +318,8 @@ router.get("/manga/:mangaId", optionalAuth, async (req, res) => {
     rating_count: Number(ratingResult.rows[0].count),
     user_rating: userRating,
     alternative_titles: alternativeTitles,
+    authors,
+    artists,
     links,
   });
 });
@@ -482,12 +521,10 @@ router.patch(
   coverUpload.single("cover"),
   async (req, res) => {
     const { mangaId } = req.params;
-    const { title, description, author, artist } = req.body;
+    const { title, description } = req.body;
     if (!title) return res.status(400).json({ error: "Title is required" });
     assertMaxLength(title, { label: "Title", max: MAX_TITLE_LENGTH });
     assertMaxLength(description, { label: "Description", max: MAX_DESCRIPTION_LENGTH });
-    assertMaxLength(author, { label: "Author", max: MAX_AUTHOR_LENGTH });
-    assertMaxLength(artist, { label: "Artist", max: MAX_ARTIST_LENGTH });
 
     const status = req.body.status || "ongoing";
     assertStatus(status);
@@ -503,6 +540,22 @@ router.patch(
       maxItems: MAX_ALTERNATIVE_TITLES,
       maxItemLength: MAX_ALTERNATIVE_TITLE_LENGTH,
     });
+
+    let authors;
+    try {
+      authors = req.body.authors ? JSON.parse(req.body.authors) : [];
+    } catch {
+      return res.status(400).json({ error: "Invalid authors" });
+    }
+    assertStringArray(authors, { label: "Authors", maxItems: MAX_AUTHORS, maxItemLength: MAX_AUTHOR_LENGTH });
+
+    let artists;
+    try {
+      artists = req.body.artists ? JSON.parse(req.body.artists) : [];
+    } catch {
+      return res.status(400).json({ error: "Invalid artists" });
+    }
+    assertStringArray(artists, { label: "Artists", maxItems: MAX_ARTISTS, maxItemLength: MAX_ARTIST_LENGTH });
 
     let rawLinks;
     try {
@@ -526,14 +579,13 @@ router.patch(
       await client.query("BEGIN");
       const result = await client.query(
         `UPDATE manga
-         SET title = $1, description = $2, format = $3, cover_path = COALESCE($4, cover_path),
-             status = $5, author = $6, artist = $7
-         WHERE id = $8 RETURNING *`,
-        [title, description || null, format, coverPath || null, status, author || null, artist || null, mangaId]
+         SET title = $1, description = $2, format = $3, cover_path = COALESCE($4, cover_path), status = $5
+         WHERE id = $6 RETURNING *`,
+        [title, description || null, format, coverPath || null, status, mangaId]
       );
-      await replaceMangaSideTables(client, mangaId, { alternativeTitles, links });
+      await replaceMangaSideTables(client, mangaId, { alternativeTitles, authors, artists, links });
       await client.query("COMMIT");
-      res.json({ ...result.rows[0], alternative_titles: alternativeTitles, links });
+      res.json({ ...result.rows[0], alternative_titles: alternativeTitles, authors, artists, links });
     } catch (err) {
       await client.query("ROLLBACK");
       throw err;

@@ -10,6 +10,22 @@ import MangaRating from "../components/MangaRating";
 import AddToLibraryButton from "../components/AddToLibraryButton";
 import SiteLinkButton from "../components/SiteLinkButton";
 
+// Stacks a meta row's values one per line (trailing comma except the last)
+// instead of one long joined string — used for Author(s)/Artist(s)/
+// Alternative, which can each hold several entries.
+function MetaValueList({ items }) {
+  return (
+    <span className="manga-meta-value-list">
+      {items.map((item, i) => (
+        <span key={i}>
+          {item}
+          {i < items.length - 1 ? "," : ""}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export default function MangaDetailPage() {
   const { mangaId } = useParams();
   const { user } = useAuth();
@@ -217,22 +233,22 @@ export default function MangaDetailPage() {
               <span className="manga-meta-label">{t("detail.statusLabel")}</span>
               <span>{t(`status.${manga.status}`)}</span>
             </div>
-            {manga.author && (
+            {manga.authors?.length > 0 && (
               <div className="manga-meta-row">
                 <span className="manga-meta-label">{t("detail.authorLabel")}</span>
-                <span>{manga.author}</span>
+                <MetaValueList items={manga.authors} />
               </div>
             )}
-            {manga.artist && (
+            {manga.artists?.length > 0 && (
               <div className="manga-meta-row">
                 <span className="manga-meta-label">{t("detail.artistLabel")}</span>
-                <span>{manga.artist}</span>
+                <MetaValueList items={manga.artists} />
               </div>
             )}
             {manga.alternative_titles?.length > 0 && (
               <div className="manga-meta-row">
                 <span className="manga-meta-label">{t("detail.alternativeLabel")}</span>
-                <span>{manga.alternative_titles.join(", ")}</span>
+                <MetaValueList items={manga.alternative_titles} />
               </div>
             )}
           </div>
