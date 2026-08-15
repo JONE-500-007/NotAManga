@@ -376,7 +376,9 @@ router.patch(
     const { is_private, visible_roles } = req.body;
     if (typeof is_private !== "boolean") return res.status(400).json({ error: "is_private is required" });
 
-    const roles = Array.isArray(visible_roles) ? visible_roles.filter((r) => ["member", "vvip"].includes(r)) : [];
+    const roles = Array.isArray(visible_roles)
+      ? visible_roles.filter((r) => ["member", "vvip", "uploader"].includes(r))
+      : [];
 
     const lockCheck = await pool.query("SELECT privacy_locked_by_admin FROM manga WHERE id = $1", [mangaId]);
     if (lockCheck.rows[0]?.privacy_locked_by_admin && req.user.role !== "admin") {

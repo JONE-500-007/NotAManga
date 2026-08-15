@@ -187,6 +187,13 @@ async function initSchema(pool) {
       PRIMARY KEY (manga_id, role)
     );
 
+    -- Lets a private manga's visible_roles allow-list also target "any
+    -- uploader" (e.g. sharing a work-in-progress with other uploaders
+    -- before it's public), not just member/vvip.
+    ALTER TABLE manga_visible_roles DROP CONSTRAINT IF EXISTS manga_visible_roles_role_check;
+    ALTER TABLE manga_visible_roles ADD CONSTRAINT manga_visible_roles_role_check
+      CHECK (role IN ('member', 'vvip', 'uploader'));
+
     -- Distinguishes a page-image work (manga/comic — chapters are a
     -- sequence of page images) from a text work (light novel — chapters are
     -- an ordered sequence of text/image blocks, see novel_blocks below).

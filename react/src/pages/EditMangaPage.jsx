@@ -581,6 +581,15 @@ export default function EditMangaPage() {
                 />
                 {t("role.vvip")}
               </label>
+              <label className={`visibility-role-checkbox${visibilityLocked ? " visibility-role-checkbox-disabled" : ""}`}>
+                <input
+                  type="checkbox"
+                  checked={visibleRoles.includes("uploader")}
+                  onChange={() => toggleVisibleRole("uploader")}
+                  disabled={visibilityLocked}
+                />
+                {t("role.uploader")}
+              </label>
             </div>
           )}
 
