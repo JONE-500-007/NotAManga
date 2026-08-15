@@ -4,7 +4,8 @@ import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import { useDragReorder } from "../hooks/useDragReorder";
-import { renderInlineMarkdown, renderMarkdown } from "../utils/renderMarkdown";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { markdownToPlainText, renderInlineMarkdown, renderMarkdown } from "../utils/renderMarkdown";
 import ArtGallery from "../components/ArtGallery";
 import MangaRating from "../components/MangaRating";
 import AddToLibraryButton from "../components/AddToLibraryButton";
@@ -58,6 +59,8 @@ export default function MangaDetailPage() {
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [coverLightboxOpen]);
+
+  useDocumentTitle(manga ? markdownToPlainText(manga.title) : null);
 
   const isOwner = user?.id === manga?.uploader_id || user?.role === "admin";
 

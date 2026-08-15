@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import { renderMarkdown } from "../utils/renderMarkdown";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import MangaCard from "../components/MangaCard";
 import MarkdownEditor from "../components/MarkdownEditor";
 import ImageCropper from "../components/ImageCropper";
@@ -46,6 +47,8 @@ export default function ProfilePage() {
   const [verificationSent, setVerificationSent] = useState(false);
   const [verificationError, setVerificationError] = useState("");
 
+  const [linkCopied, setLinkCopied] = useState(false);
+
   useEffect(() => {
     if (!targetId) return;
     setPublicProfile(null);
@@ -61,7 +64,10 @@ export default function ProfilePage() {
     }
   }, [isSelf, user]);
 
+  useDocumentTitle(isSelf ? user?.display_name || user?.username : publicProfile?.display_name || publicProfile?.username);
+
   if (!userId && !user) return <Navigate to="/login" replace />;
+  if (!userId && user) return <Navigate to={`/users/${user.id}`} replace />;
   if (notFound) return <div className="page-loading">{t("profile.notFound")}</div>;
   if (!publicProfile || (isSelf && !user)) return <div className="page-loading">{t("common.loading")}</div>;
 
@@ -95,6 +101,24 @@ export default function ProfilePage() {
     } finally {
       setSendingVerification(false);
     }
+  };
+
+  const handleCopyLink = async () => {
+    const url = `${window.location.origin}/users/${user.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = url;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
   };
 
   const handleCropped = async (blob, kind) => {
@@ -159,6 +183,12 @@ export default function ProfilePage() {
       <div className="profile-header-info">
         <h1>{isSelf ? displayName || username : publicProfile.display_name || username}</h1>
         <span className="role-badge">{t(`role.${role}`)}</span>
+        {isSelf && (
+          <button type="button" className="btn btn-ghost btn-sm profile-copy-link-btn" onClick={handleCopyLink}>
+            <span className="material-symbols-outlined">{linkCopied ? "check" : "link"}</span>
+            {linkCopied ? t("profile.linkCopied") : t("profile.copyLink")}
+          </button>
+        )}
       </div>
 
       {uploadingKind && <UploadProgressBar percent={uploadProgress} />}

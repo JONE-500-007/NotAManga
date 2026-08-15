@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { useLanguage } from "../context/LanguageContext";
-import { renderInlineMarkdown } from "../utils/renderMarkdown";
+import { markdownToPlainText, renderInlineMarkdown } from "../utils/renderMarkdown";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import MangaCard from "../components/MangaCard";
 
 export default function TagMangaPage() {
@@ -14,6 +15,8 @@ export default function TagMangaPage() {
     setTag(null);
     api.get(`/tags/${tagId}`).then(setTag);
   }, [tagId]);
+
+  useDocumentTitle(tag ? markdownToPlainText(tag.name) : null);
 
   if (!tag) return <div className="page-loading">{t("common.loading")}</div>;
 

@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { useLanguage } from "../context/LanguageContext";
 import { useReaderSettings } from "../hooks/useReaderSettings";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { markdownToPlainText } from "../utils/renderMarkdown";
 import ReaderSettingsPanel from "../components/ReaderSettingsPanel";
 
 const HIDE_DELAY_MS = 2500;
@@ -57,6 +59,10 @@ export default function ReaderPage() {
     if (!manga) return;
     setDirection(manga.format === "comic" ? "ltr" : "rtl");
   }, [manga, setDirection]);
+
+  useDocumentTitle(
+    manga && chapter ? `${markdownToPlainText(manga.title)} - Ch. ${chapter.chapter_number}` : null
+  );
 
   const groupSize = settings.doublePage ? 2 : 1;
   const totalPages = chapter?.pages.length ?? 0;

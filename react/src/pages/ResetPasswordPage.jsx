@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import { useLanguage } from "../context/LanguageContext";
+import PasswordInput from "../components/PasswordInput";
 
 export default function ResetPasswordPage() {
   const { t } = useLanguage();
@@ -53,8 +54,7 @@ export default function ResetPasswordPage() {
 
           <label>
             {t("resetPassword.password")}
-            <input
-              type="password"
+            <PasswordInput
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               minLength={8}
@@ -64,8 +64,7 @@ export default function ResetPasswordPage() {
 
           <label>
             {t("resetPassword.confirmPassword")}
-            <input
-              type="password"
+            <PasswordInput
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               minLength={8}

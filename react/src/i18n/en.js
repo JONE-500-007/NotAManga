@@ -313,6 +313,8 @@ export default {
   "common.on": "On",
   "common.off": "Off",
   "common.uploading": "Uploading",
+  "common.showPassword": "Show password",
+  "common.hidePassword": "Hide password",
 
   "admin.categories.title": "Manage Categories",
   "admin.categories.addTitle": "Add category",
@@ -378,6 +380,8 @@ export default {
   "tags.empty": "No manga have this tag yet.",
 
   "profile.notFound": "User not found.",
+  "profile.copyLink": "Copy profile link",
+  "profile.linkCopied": "Link copied!",
   "profile.changeAvatar": "Change avatar",
   "profile.changeBanner": "Change banner",
   "profile.displayName": "Display name",

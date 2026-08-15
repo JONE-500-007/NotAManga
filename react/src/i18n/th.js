@@ -313,6 +313,8 @@ export default {
   "common.on": "เปิด",
   "common.off": "ปิด",
   "common.uploading": "กำลังอัปโหลด",
+  "common.showPassword": "แสดงรหัสผ่าน",
+  "common.hidePassword": "ซ่อนรหัสผ่าน",
 
   "admin.categories.title": "จัดการหมวดหมู่",
   "admin.categories.addTitle": "เพิ่มหมวดหมู่",
@@ -378,6 +380,8 @@ export default {
   "tags.empty": "ยังไม่มีการ์ตูนที่มีแท็กนี้",
 
   "profile.notFound": "ไม่พบผู้ใช้นี้",
+  "profile.copyLink": "คัดลอกลิงก์โปรไฟล์",
+  "profile.linkCopied": "คัดลอกลิงก์แล้ว!",
   "profile.changeAvatar": "เปลี่ยนรูปโปรไฟล์",
   "profile.changeBanner": "เปลี่ยนแบนเนอร์",
   "profile.displayName": "ชื่อที่แสดง",

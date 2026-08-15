@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import GoogleButton from "../components/GoogleButton";
+import PasswordInput from "../components/PasswordInput";
 
 export default function LoginPage() {
   const { user, login } = useAuth();
@@ -50,12 +51,7 @@ export default function LoginPage() {
 
         <label>
           {t("login.password")}
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+          <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} required />
         </label>
 
         <Link to="/forgot-password" className="auth-forgot-link">

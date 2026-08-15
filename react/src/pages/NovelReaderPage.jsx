@@ -4,6 +4,8 @@ import { api } from "../api/client";
 import { useLanguage } from "../context/LanguageContext";
 import { renderMarkdown } from "../utils/renderMarkdown";
 import { useNovelReaderSettings, FONT_FAMILIES } from "../hooks/useNovelReaderSettings";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { markdownToPlainText } from "../utils/renderMarkdown";
 import NovelReaderSettingsPanel from "../components/NovelReaderSettingsPanel";
 
 const HIDE_DELAY_MS = 2500;
@@ -15,6 +17,7 @@ export default function NovelReaderPage() {
   const { settings, setTheme, setFontSize, setFontFamily } = useNovelReaderSettings();
   const [chapter, setChapter] = useState(null);
   const [chapterList, setChapterList] = useState([]);
+  const [mangaTitle, setMangaTitle] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [chromeVisible, setChromeVisible] = useState(true);
   const hideTimerRef = useRef(null);
@@ -25,12 +28,19 @@ export default function NovelReaderPage() {
   }, [mangaId, chapterId]);
 
   useEffect(() => {
-    api.get(`/manga/${mangaId}`).then((data) => setChapterList(data.chapters));
+    api.get(`/manga/${mangaId}`).then((data) => {
+      setChapterList(data.chapters);
+      setMangaTitle(data.title);
+    });
   }, [mangaId]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [chapterId]);
+
+  useDocumentTitle(
+    mangaTitle && chapter ? `${markdownToPlainText(mangaTitle)} - Ch. ${chapter.chapter_number}` : null
+  );
 
   // Auto-hide the topbar while reading, same as the manga reader — reveal
   // it again on any scroll/mouse/touch activity, then hide it after a

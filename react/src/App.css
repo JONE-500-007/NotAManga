@@ -1458,6 +1458,38 @@
   cursor: not-allowed;
 }
 
+.password-input-wrap {
+  position: relative;
+  display: flex;
+}
+
+.password-input-wrap input {
+  width: 100%;
+  padding-right: 40px;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+}
+
+.password-toggle-btn:hover {
+  color: var(--accent);
+}
+
+.password-toggle-btn .material-symbols-outlined {
+  font-size: 20px;
+}
+
 .form-error {
   color: var(--danger);
   font-size: 14px;
@@ -3276,6 +3308,16 @@ textarea.markdown-field {
 
 .profile-header-info h1 {
   margin: 0;
+}
+
+.profile-copy-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-copy-link-btn .material-symbols-outlined {
+  font-size: 16px;
 }
 
 .profile-edit-form {

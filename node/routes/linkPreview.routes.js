@@ -13,7 +13,7 @@ const router = express.Router();
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 const SITE_NAME = "NotAManga";
-const DEFAULT_DESCRIPTION = "ฉันๆๆนาๆๆๆๆ ขอๆขนอๆสสๆอขๆ โทษๆาๆทๆทาทๆา";
+const DEFAULT_DESCRIPTION = "อ่านมังงะและนิยายแปลไทยออนไลน์ฟรีที่ NotAManga พร้อมระบบติดตามเรื่องโปรด จัดอันดับ และอัปเดตตอนใหม่";
 // Same file react/index.html points <link rel="icon"> at — Discord (and a
 // few others) read this tag to show a small site icon alongside the embed.
 const SITE_ICON_URL = `${FRONTEND_URL}/icon_web.png`;

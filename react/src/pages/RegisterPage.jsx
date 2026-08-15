@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import GoogleButton from "../components/GoogleButton";
+import PasswordInput from "../components/PasswordInput";
 
 export default function RegisterPage() {
   const { user, register } = useAuth();
@@ -52,8 +53,7 @@ export default function RegisterPage() {
 
         <label>
           {t("register.password")}
-          <input
-            type="password"
+          <PasswordInput
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             minLength={8}

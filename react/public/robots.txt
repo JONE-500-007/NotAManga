@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /verify-email
+Disallow: /profile
+Disallow: /library
+Disallow: /upload
+Disallow: /admin
+Disallow: /api/
+
+Sitemap: https://notamanga.dpdns.org/sitemap.xml
