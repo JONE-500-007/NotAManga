@@ -42,14 +42,20 @@ function requireRole(...roles) {
   };
 }
 
+// work_type rides along because it decides which top-level folder this work's
+// files live under (uploads/manga/<id>/ vs uploads/novel/<id>/, see
+// utils/mangaStorage.js). Every route that writes or deletes a file is already
+// behind this middleware, so attaching the row here saves them each repeating
+// the same lookup — read it as req.manga.
 async function requireMangaOwner(req, res, next) {
   const { mangaId } = req.params;
-  const result = await pool.query("SELECT uploader_id FROM manga WHERE id = $1", [mangaId]);
+  const result = await pool.query("SELECT id, uploader_id, work_type FROM manga WHERE id = $1", [mangaId]);
   const manga = result.rows[0];
   if (!manga) return res.status(404).json({ error: "Manga not found" });
   if (req.user.role !== "admin" && manga.uploader_id !== req.user.id) {
     return res.status(403).json({ error: "Forbidden" });
   }
+  req.manga = manga;
   next();
 }
 

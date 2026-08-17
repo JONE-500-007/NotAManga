@@ -3,6 +3,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { detectImageExtension } = require("./imageValidation");
 const { assertText, MAX_NOVEL_BLOCKS_PER_CHAPTER, MAX_BLOCK_TEXT_LENGTH } = require("./validation");
+const { mangaKindDir, mangaFileUrl, NOVEL } = require("./mangaStorage");
 
 // Inserts a chapter's ordered content blocks. Each block is either
 // {type: "text", content} or {type: "image", existingPath?}. Image blocks
@@ -20,7 +21,8 @@ const { assertText, MAX_NOVEL_BLOCKS_PER_CHAPTER, MAX_BLOCK_TEXT_LENGTH } = requ
 // Files are written here (not by multer) so that check runs first; if a
 // later block fails, any files already written by this call are removed
 // again since the caller's DB rollback can't undo them.
-async function saveNovelBlocks(client, { chapterId, blocks, files, destDir }) {
+async function saveNovelBlocks(client, { chapterId, workType, mangaId, blocks, files }) {
+  const destDir = mangaKindDir(workType, mangaId, NOVEL);
   if (blocks.length > MAX_NOVEL_BLOCKS_PER_CHAPTER) {
     const err = new Error(`A chapter can have at most ${MAX_NOVEL_BLOCKS_PER_CHAPTER} content blocks`);
     err.status = 400;
@@ -52,9 +54,10 @@ async function saveNovelBlocks(client, { chapterId, blocks, files, destDir }) {
           const ext = await detectImageExtension(file.buffer);
           const filename = `${crypto.randomUUID()}.${ext}`;
           const filePath = path.join(destDir, filename);
+          await fs.mkdir(destDir, { recursive: true });
           await fs.writeFile(filePath, file.buffer);
           writtenPaths.push(filePath);
-          imagePath = `/uploads/novel-images/${filename}`;
+          imagePath = mangaFileUrl(workType, mangaId, NOVEL, filename);
         }
         await client.query(
           "INSERT INTO novel_blocks (chapter_id, position, block_type, image_path) VALUES ($1, $2, 'image', $3)",

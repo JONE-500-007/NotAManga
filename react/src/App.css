@@ -451,6 +451,13 @@
      stretching to fill the row. */
   grid-template-columns: repeat(auto-fill, var(--card-w-medium));
   gap: 20px;
+  /* Fixed tracks (above) mean the row almost never divides evenly into the
+     container, and the remainder piles up as one wide gap on the right —
+     which reads as "the grid is misaligned" at exactly the widths where the
+     leftover is nearly a whole card. Centring spreads that remainder to
+     both margins instead, so the block stays visually balanced at every
+     viewport width and card size without resizing the cards themselves. */
+  justify-content: center;
 }
 
 .manga-grid--xs {
@@ -536,6 +543,15 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  /* Thai stacks tone marks above and vowels below the base glyph, so its
+     line boxes come out taller than the font's own metrics predict — enough
+     that -webkit-line-clamp on its own leaves a sliver of the third line
+     showing under the ellipsis. Pinning line-height makes the box height
+     deterministic, and the matching max-height (2 lines + the 10px padding
+     on each side, counted because box-sizing is border-box) crops whatever
+     the clamp lets through. */
+  line-height: 1.45;
+  max-height: calc(1.45em * 2 + 20px);
 }
 
 .shelf {
@@ -2639,6 +2655,47 @@ textarea.markdown-field {
   min-height: 100px;
 }
 
+/* The browser's own resize grabber is a hairline triangle in a near-black
+   grey — on these dark surfaces it's essentially invisible, so people don't
+   realise the box can be dragged taller at all. Chromium/Safari let us blank
+   out the native one via ::-webkit-resizer; Firefox doesn't, but its default
+   grip is faint enough that the drawn one below still reads as the grip
+   rather than as a second overlapping widget. The background is decorative
+   only — the actual drag target stays the browser's own resizer on top. */
+textarea.markdown-field,
+.upload-form textarea,
+.art-add-tile textarea {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0 2px,
+    var(--text-muted) 2px 3px
+  );
+  background-repeat: no-repeat;
+  background-position: bottom 4px right 4px;
+  background-size: 10px 10px;
+}
+
+textarea.markdown-field::-webkit-resizer,
+.upload-form textarea::-webkit-resizer,
+.art-add-tile textarea::-webkit-resizer {
+  background: transparent;
+}
+
+/* Nudged up on hover/focus so the grip reads as interactive rather than as
+   a texture baked into the corner. */
+textarea.markdown-field:hover,
+textarea.markdown-field:focus,
+.upload-form textarea:hover,
+.upload-form textarea:focus,
+.art-add-tile textarea:hover,
+.art-add-tile textarea:focus {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0 2px,
+    var(--accent) 2px 3px
+  );
+}
+
 .markdown-preview {
   border-top: 1px solid var(--border);
   padding: 10px 12px;
@@ -3428,6 +3485,19 @@ textarea.markdown-field {
 }
 
 @media (max-width: 640px) {
+  /* On a phone the display name wraps to two or three lines, and the role
+     badge plus copy-link button get squeezed into the narrow column left
+     beside it — the button ends up three words tall. Give the name the whole
+     row and let the badge and button share the next one. Desktop has the
+     width to keep all three inline, so this stays inside the query. */
+  .profile-header-info {
+    flex-wrap: wrap;
+  }
+
+  .profile-header-info h1 {
+    flex-basis: 100%;
+  }
+
   .profile-avatar-wrap {
     left: 16px;
   }

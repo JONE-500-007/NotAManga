@@ -5,27 +5,34 @@ const multer = require("multer");
 const { detectImageExtension } = require("../utils/imageValidation");
 
 const UPLOADS_ROOT = path.join(__dirname, "..", "uploads");
-const COVERS_DIR = path.join(UPLOADS_ROOT, "covers");
-const PAGES_DIR = path.join(UPLOADS_ROOT, "pages");
-const ART_DIR = path.join(UPLOADS_ROOT, "art");
-const AVATARS_DIR = path.join(UPLOADS_ROOT, "avatars");
-const BANNERS_DIR = path.join(UPLOADS_ROOT, "banners");
-const NOVEL_IMAGES_DIR = path.join(UPLOADS_ROOT, "novel-images");
+
+// Belongs to no single work or account, so it stays top-level. Per-work files
+// live under uploads/{manga,novel}/<id>/ (utils/mangaStorage.js) and per-account
+// ones under uploads/users/<id>/ (utils/userStorage.js).
 const LINK_SITE_ICONS_DIR = path.join(UPLOADS_ROOT, "link-site-icons");
 
-fs.mkdirSync(COVERS_DIR, { recursive: true });
-fs.mkdirSync(PAGES_DIR, { recursive: true });
-fs.mkdirSync(ART_DIR, { recursive: true });
-fs.mkdirSync(AVATARS_DIR, { recursive: true });
-fs.mkdirSync(BANNERS_DIR, { recursive: true });
-fs.mkdirSync(NOVEL_IMAGES_DIR, { recursive: true });
+// Shipped with the app rather than uploaded, and shared by every account that
+// hasn't picked its own picture — so they can't live in any one user's folder.
+const DEFAULTS_DIR = path.join(UPLOADS_ROOT, "defaults");
+
+// The pre-reorganisation layout, where files were pooled in shared top-level
+// folders. Nothing writes here any more; the exports exist so
+// scripts/migrate-uploads.js can find what's left to move.
+const LEGACY_COVERS_DIR = path.join(UPLOADS_ROOT, "covers");
+const LEGACY_PAGES_DIR = path.join(UPLOADS_ROOT, "pages");
+const LEGACY_ART_DIR = path.join(UPLOADS_ROOT, "art");
+const LEGACY_NOVEL_IMAGES_DIR = path.join(UPLOADS_ROOT, "novel-images");
+const LEGACY_AVATARS_DIR = path.join(UPLOADS_ROOT, "avatars");
+const LEGACY_BANNERS_DIR = path.join(UPLOADS_ROOT, "banners");
+
 fs.mkdirSync(LINK_SITE_ICONS_DIR, { recursive: true });
+fs.mkdirSync(DEFAULTS_DIR, { recursive: true });
 
 // Shipped alongside the app (not user-uploaded), served by users who haven't
 // picked their own avatar/banner yet. Never pass these through
 // deleteUploadedFile — see the raw (non-COALESCE) lookups in users.routes.js.
-const DEFAULT_AVATAR_PATH = "/uploads/avatars/profile_default.jpg";
-const DEFAULT_BANNER_PATH = "/uploads/banners/banner_default.png";
+const DEFAULT_AVATAR_PATH = "/uploads/defaults/profile_default.jpg";
+const DEFAULT_BANNER_PATH = "/uploads/defaults/banner_default.png";
 
 function imageFileFilter(req, file, cb) {
   if (!file.mimetype.startsWith("image/")) {
@@ -73,13 +80,14 @@ module.exports = {
   novelImageUpload,
   linkSiteIconUpload,
   saveValidatedImage,
-  COVERS_DIR,
-  PAGES_DIR,
-  ART_DIR,
-  AVATARS_DIR,
-  BANNERS_DIR,
-  NOVEL_IMAGES_DIR,
   LINK_SITE_ICONS_DIR,
+  DEFAULTS_DIR,
+  LEGACY_COVERS_DIR,
+  LEGACY_PAGES_DIR,
+  LEGACY_ART_DIR,
+  LEGACY_NOVEL_IMAGES_DIR,
+  LEGACY_AVATARS_DIR,
+  LEGACY_BANNERS_DIR,
   UPLOADS_ROOT,
   DEFAULT_AVATAR_PATH,
   DEFAULT_BANNER_PATH,

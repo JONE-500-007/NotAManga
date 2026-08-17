@@ -1,7 +1,8 @@
 const express = require("express");
 const pool = require("../db/pool");
 const { requireAuth, optionalAuth } = require("../middleware/auth");
-const { avatarUpload, bannerUpload, saveValidatedImage, AVATARS_DIR, BANNERS_DIR } = require("../middleware/upload");
+const { avatarUpload, bannerUpload } = require("../middleware/upload");
+const { saveUserImage, AVATARS, BANNERS } = require("../utils/userStorage");
 const { deleteUploadedFile } = require("../utils/fileStorage");
 const { SAFE_USER_COLUMNS, PUBLIC_USER_COLUMNS } = require("../utils/userColumns");
 const { visibilityFilter } = require("../utils/mangaVisibility");
@@ -59,7 +60,7 @@ router.post("/users/me/avatar", requireAuth, avatarUpload.single("avatar"), asyn
   const existing = await pool.query("SELECT avatar_path FROM users WHERE id = $1", [req.user.id]);
   await deleteUploadedFile(existing.rows[0]?.avatar_path);
 
-  const avatarPath = `/uploads/avatars/${await saveValidatedImage(req.file, AVATARS_DIR)}`;
+  const avatarPath = await saveUserImage(req.file, req.user.id, AVATARS);
   const result = await pool.query(
     `UPDATE users SET avatar_path = $1 WHERE id = $2 RETURNING ${SAFE_USER_COLUMNS}`,
     [avatarPath, req.user.id]
@@ -73,7 +74,7 @@ router.post("/users/me/banner", requireAuth, bannerUpload.single("banner"), asyn
   const existing = await pool.query("SELECT banner_path FROM users WHERE id = $1", [req.user.id]);
   await deleteUploadedFile(existing.rows[0]?.banner_path);
 
-  const bannerPath = `/uploads/banners/${await saveValidatedImage(req.file, BANNERS_DIR)}`;
+  const bannerPath = await saveUserImage(req.file, req.user.id, BANNERS);
   const result = await pool.query(
     `UPDATE users SET banner_path = $1 WHERE id = $2 RETURNING ${SAFE_USER_COLUMNS}`,
     [bannerPath, req.user.id]

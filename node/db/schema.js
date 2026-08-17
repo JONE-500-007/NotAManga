@@ -46,9 +46,6 @@ async function initSchema(pool) {
 
     ALTER TABLE chapters ADD COLUMN IF NOT EXISTS volume NUMERIC;
 
-    ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
-    ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('member', 'uploader', 'admin'));
-
     CREATE TABLE IF NOT EXISTS categories (
       id SERIAL PRIMARY KEY,
       title TEXT NOT NULL,

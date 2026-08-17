@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
@@ -64,22 +64,46 @@ export default function MangaDetailPage() {
 
   const isOwner = user?.id === manga?.uploader_id || user?.role === "admin";
 
-  const commitChapterOrder = async (orderedChapterIds) => {
-    await api.patch(`/manga/${mangaId}/chapters/reorder`, { orderedChapterIds });
-    // The reorder endpoint renumbers chapter_number to match array position (1-indexed);
-    // mirror that locally so labels don't show stale numbers until the next fetch.
-    setChapters((current) =>
-      orderedChapterIds.map((id, index) => {
-        const chapter = current.find((c) => c.id === id);
-        return { ...chapter, chapter_number: index + 1 };
-      })
-    );
-  };
+  // `chapters` state stays ascending — that's the order the API returns and
+  // the order the reorder endpoint numbers by (array position 1..N). The
+  // list is *shown* newest-first to everyone though, owner included, so the
+  // two audiences don't read the same page in opposite directions. These
+  // adapters are what let the owner's drag-reorder keep operating on the
+  // ascending truth while the rows on screen run the other way.
+  const displayChapters = useMemo(() => [...chapters].reverse(), [chapters]);
+
+  const setDisplayChapters = useCallback((updater) => {
+    setChapters((current) => {
+      const next = typeof updater === "function" ? updater([...current].reverse()) : updater;
+      return [...next].reverse();
+    });
+  }, []);
+
+  const commitChapterOrder = useCallback(
+    async (orderedDisplayIds) => {
+      const orderedChapterIds = [...orderedDisplayIds].reverse();
+      await api.patch(`/manga/${mangaId}/chapters/reorder`, { orderedChapterIds });
+      // The endpoint hands the chapter numbers already in use back out in the
+      // new order rather than renumbering 1..N — that's what keeps a 5.5 side
+      // story from becoming a 6. Mirror the same rule locally so the labels
+      // don't show stale numbers until the next fetch.
+      setChapters((current) => {
+        const numbersAscending = current
+          .map((c) => c.chapter_number)
+          .sort((a, b) => Number(a) - Number(b));
+        return orderedChapterIds.map((id, index) => {
+          const chapter = current.find((c) => c.id === id);
+          return { ...chapter, chapter_number: numbersAscending[index] };
+        });
+      });
+    },
+    [mangaId]
+  );
 
   const { draggingId, dragArmed, armDrag, disarmDrag, handleDragStart, handleDragOver, handleDrop, moveByOffset } =
     useDragReorder({
-      items: chapters,
-      setItems: setChapters,
+      items: displayChapters,
+      setItems: setDisplayChapters,
       onCommit: commitChapterOrder,
     });
 
@@ -96,7 +120,6 @@ export default function MangaDetailPage() {
   const readOrBuyLinks = links.filter((l) => l.category === "read_or_buy");
   const trackLinks = links.filter((l) => l.category === "track");
 
-  const displayChapters = isOwner ? chapters : [...chapters].reverse();
   const hasVolumes = chapters.some((c) => c.volume != null);
 
   let lastVolume;
