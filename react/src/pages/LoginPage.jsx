@@ -3,7 +3,12 @@ import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import GoogleButton from "../components/GoogleButton";
-import FacebookButton from "../components/FacebookButton";
+// Facebook Login is disabled — the app is stuck in Development Mode behind
+// Meta's Business Verification, which the account trying to complete it
+// currently can't pass (ad account restriction, unrelated to this app).
+// Re-enable by uncommenting this import and the <FacebookButton> below once
+// that's sorted out; the backend routes and env config are untouched.
+// import FacebookButton from "../components/FacebookButton";
 import PasswordInput from "../components/PasswordInput";
 
 export default function LoginPage() {
@@ -43,7 +48,7 @@ export default function LoginPage() {
         <h1>{t("login.title")}</h1>
 
         {searchParams.get("error") === "google" && <p className="form-error">{t("login.googleError")}</p>}
-        {searchParams.get("error") === "facebook" && <p className="form-error">{t("login.facebookError")}</p>}
+        {/* {searchParams.get("error") === "facebook" && <p className="form-error">{t("login.facebookError")}</p>} */}
         {searchParams.get("reset") === "1" && <p className="auth-message">{t("login.resetSuccess")}</p>}
 
         <label>
@@ -71,7 +76,7 @@ export default function LoginPage() {
         </div>
 
         <GoogleButton>{t("login.orGoogle")}</GoogleButton>
-        <FacebookButton>{t("login.orFacebook")}</FacebookButton>
+        {/* <FacebookButton>{t("login.orFacebook")}</FacebookButton> */}
 
         <p className="auth-switch">
           <Link to="/register">{t("login.registerPrompt")}</Link>

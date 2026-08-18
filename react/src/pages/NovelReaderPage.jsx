@@ -152,7 +152,17 @@ export default function NovelReaderPage() {
               dangerouslySetInnerHTML={{ __html: renderMarkdown(block.content) }}
             />
           ) : (
-            <img key={block.id} src={block.image_path} alt="" className="novel-reader-image" />
+            // Same reasoning as ReaderPage's longstrip mode: every block in the
+            // chapter mounts at once, so without this an image near the end
+            // would start downloading alongside one at the top.
+            <img
+              key={block.id}
+              src={block.image_path}
+              alt=""
+              className="novel-reader-image"
+              loading="lazy"
+              decoding="async"
+            />
           )
         )}
       </div>

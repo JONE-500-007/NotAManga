@@ -344,6 +344,15 @@ export default function ReaderPage() {
         </div>
       ) : (
         <div className={`reader-longstrip${settings.showProgress ? " reader-content-with-bottom-bar" : ""}`}>
+          {/* Every group in the chapter is mounted up front for smooth scrolling
+              (unlike paged mode, which only ever renders the current group), so
+              without `loading="lazy"` the browser would fire off every page's
+              request the instant the chapter opens — the worst case for anyone
+              on a slow connection, since page 40 competes with page 1 for
+              bandwidth. `loading="lazy"` defers each <img> until it's close to
+              the viewport, so pages load in roughly the order the reader
+              scrolls to them. Only the first group is eager, so the page the
+              reader actually lands on doesn't wait on that same threshold. */}
           {groups.map((group, index) => (
             <div
               key={group.startIndex}
@@ -358,6 +367,9 @@ export default function ReaderPage() {
                   src={page.image_path}
                   alt={`Page ${page.page_number}`}
                   className="reader-image reader-longstrip-image"
+                  loading={index === 0 ? "eager" : "lazy"}
+                  decoding="async"
+                  fetchPriority={index === 0 ? "high" : "auto"}
                 />
               ))}
             </div>

@@ -3,7 +3,8 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import GoogleButton from "../components/GoogleButton";
-import FacebookButton from "../components/FacebookButton";
+// Facebook Login is disabled — see the matching comment in LoginPage.jsx.
+// import FacebookButton from "../components/FacebookButton";
 import PasswordInput from "../components/PasswordInput";
 
 export default function RegisterPage() {
@@ -73,7 +74,7 @@ export default function RegisterPage() {
         </div>
 
         <GoogleButton>{t("register.orGoogle")}</GoogleButton>
-        <FacebookButton>{t("register.orFacebook")}</FacebookButton>
+        {/* <FacebookButton>{t("register.orFacebook")}</FacebookButton> */}
 
         <p className="auth-switch">
           <Link to="/login">{t("register.loginPrompt")}</Link>
