@@ -14,7 +14,14 @@ const router = express.Router();
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
+const FACEBOOK_APP_ID = process.env.FACEBOOK_APP_ID;
+const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET;
+const FACEBOOK_REDIRECT_URI = process.env.FACEBOOK_REDIRECT_URI;
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+// Facebook API versions are only guaranteed ~2 years from release; bump this
+// well before that window closes rather than waiting for calls to start
+// failing. Current versions: https://developers.facebook.com/docs/graph-api/changelog
+const FACEBOOK_API_VERSION = "v21.0";
 
 const OAUTH_STATE_COOKIE_OPTIONS = {
   httpOnly: true,
@@ -184,6 +191,99 @@ router.get("/google/callback", async (req, res) => {
   } catch (err) {
     console.error("Google OAuth callback failed", err);
     res.redirect(`${FRONTEND_URL}/login?error=google`);
+  }
+});
+
+router.get("/facebook", (req, res) => {
+  if (!FACEBOOK_APP_ID || !FACEBOOK_REDIRECT_URI) {
+    return res.status(500).json({ error: "Facebook sign-in is not configured" });
+  }
+
+  const state = crypto.randomBytes(16).toString("hex");
+  res.cookie("oauth_state", state, OAUTH_STATE_COOKIE_OPTIONS);
+
+  const params = new URLSearchParams({
+    client_id: FACEBOOK_APP_ID,
+    redirect_uri: FACEBOOK_REDIRECT_URI,
+    response_type: "code",
+    scope: "email public_profile",
+    state,
+  });
+  res.redirect(`https://www.facebook.com/${FACEBOOK_API_VERSION}/dialog/oauth?${params.toString()}`);
+});
+
+router.get("/facebook/callback", async (req, res) => {
+  const { code, state } = req.query;
+  const expectedState = req.cookies.oauth_state;
+  res.clearCookie("oauth_state", OAUTH_STATE_COOKIE_OPTIONS);
+
+  if (!code || !state || state !== expectedState) {
+    return res.redirect(`${FRONTEND_URL}/login?error=facebook`);
+  }
+
+  try {
+    // Facebook's token exchange is a GET with the code as a query param
+    // (Google's is a POST form body) — everything past this point matches
+    // the Google flow above.
+    const tokenParams = new URLSearchParams({
+      client_id: FACEBOOK_APP_ID,
+      client_secret: FACEBOOK_APP_SECRET,
+      redirect_uri: FACEBOOK_REDIRECT_URI,
+      code,
+    });
+    const tokenRes = await fetch(
+      `https://graph.facebook.com/${FACEBOOK_API_VERSION}/oauth/access_token?${tokenParams.toString()}`
+    );
+    if (!tokenRes.ok) throw new Error("Facebook token exchange failed");
+    const tokenData = await tokenRes.json();
+
+    const userInfoParams = new URLSearchParams({
+      fields: "id,name,email",
+      access_token: tokenData.access_token,
+    });
+    const userInfoRes = await fetch(`https://graph.facebook.com/me?${userInfoParams.toString()}`);
+    if (!userInfoRes.ok) throw new Error("Facebook userinfo fetch failed");
+    const fbUser = await userInfoRes.json();
+
+    let result = await pool.query("SELECT * FROM users WHERE facebook_id = $1", [fbUser.id]);
+    let user = result.rows[0];
+
+    if (!user && fbUser.email) {
+      result = await pool.query("SELECT * FROM users WHERE LOWER(email) = LOWER($1)", [fbUser.email]);
+      user = result.rows[0];
+      if (user) {
+        // Link the Facebook identity to the existing local account without
+        // touching auth_provider, so they keep password login + email edits.
+        // Facebook only returns email for addresses it has already confirmed,
+        // so mark it verified too.
+        const updated = await pool.query(
+          "UPDATE users SET facebook_id = $1, email_verified = true WHERE id = $2 RETURNING *",
+          [fbUser.id, user.id]
+        );
+        user = updated.rows[0];
+      }
+    }
+
+    if (!user) {
+      // Unlike Google, Facebook doesn't require (or always grant) email
+      // access — a user can decline the permission or simply have no
+      // confirmed email on file, and fbUser.email comes back undefined
+      // either way. Fall back to the Facebook id so account creation never
+      // depends on it being present.
+      const username = await generateUniqueUsername(fbUser.name || `fbuser${fbUser.id}`);
+      const inserted = await pool.query(
+        `INSERT INTO users (username, email, display_name, facebook_id, role, auth_provider, email_verified)
+         VALUES ($1, $2, $3, $4, 'member', 'facebook', $5) RETURNING *`,
+        [username, fbUser.email || null, fbUser.name || null, fbUser.id, Boolean(fbUser.email)]
+      );
+      user = inserted.rows[0];
+    }
+
+    res.cookie("token", sign(user), COOKIE_OPTIONS);
+    res.redirect(FRONTEND_URL);
+  } catch (err) {
+    console.error("Facebook OAuth callback failed", err);
+    res.redirect(`${FRONTEND_URL}/login?error=facebook`);
   }
 });
 

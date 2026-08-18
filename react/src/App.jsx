@@ -10,6 +10,8 @@ import RegisterPage from "./pages/RegisterPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import DataDeletionPage from "./pages/DataDeletionPage";
 import BrowsePage from "./pages/BrowsePage";
 import MangaDetailPage from "./pages/MangaDetailPage";
 import ChapterReaderRouter from "./pages/ChapterReaderRouter";
@@ -81,6 +83,8 @@ function App() {
               <Route path="/tags/:tagId" element={<TagMangaPage />} />
               <Route path="/users/:userId" element={<ProfilePage />} />
               <Route path="/library/:listId" element={<LibraryListPage />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+              <Route path="/data-deletion" element={<DataDeletionPage />} />
 
               <Route element={<ProtectedRoute />}>
                 <Route path="/profile" element={<ProfilePage />} />

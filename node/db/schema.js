@@ -71,20 +71,26 @@ async function initSchema(pool) {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider TEXT NOT NULL DEFAULT 'local';
 
+    -- Same shape as google_id: set only for accounts that signed up (or
+    -- linked) via Facebook Login. See routes/auth.routes.js's /facebook and
+    -- /facebook/callback, which mirror the Google flow immediately below them.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS facebook_id TEXT;
+
     ALTER TABLE users DROP CONSTRAINT IF EXISTS users_auth_provider_check;
-    ALTER TABLE users ADD CONSTRAINT users_auth_provider_check CHECK (auth_provider IN ('local', 'google'));
+    ALTER TABLE users ADD CONSTRAINT users_auth_provider_check CHECK (auth_provider IN ('local', 'google', 'facebook'));
 
     ALTER TABLE users DROP CONSTRAINT IF EXISTS users_auth_method_check;
     ALTER TABLE users ADD CONSTRAINT users_auth_method_check
-      CHECK (password_hash IS NOT NULL OR google_id IS NOT NULL);
+      CHECK (password_hash IS NOT NULL OR google_id IS NOT NULL OR facebook_id IS NOT NULL);
 
     CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique_idx ON users (LOWER(email)) WHERE email IS NOT NULL;
     CREATE UNIQUE INDEX IF NOT EXISTS users_google_id_unique_idx ON users (google_id) WHERE google_id IS NOT NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS users_facebook_id_unique_idx ON users (facebook_id) WHERE facebook_id IS NOT NULL;
 
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT false;
-    -- Google already confirms the email address, so Google-authenticated
-    -- accounts don't need our own verification step.
-    UPDATE users SET email_verified = true WHERE auth_provider = 'google' AND email_verified = false;
+    -- Google/Facebook already confirm the email address, so accounts
+    -- authenticated through either don't need our own verification step.
+    UPDATE users SET email_verified = true WHERE auth_provider IN ('google', 'facebook') AND email_verified = false;
 
     -- Drives the reader's default page-spread direction: manga reads
     -- right-to-left, comics/manhwa read left-to-right.

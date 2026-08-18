@@ -217,7 +217,12 @@ export default function ProfilePage() {
             <p className="profile-email-locked-hint">{t("profile.emailGoogleLocked")}</p>
           )}
 
-          {user.auth_provider === "local" &&
+          {/* Google's email is locked and pre-verified above, so it never needs
+              this block. Facebook doesn't guarantee an email at all — it may
+              be absent, or the user may type one in here by hand — so it
+              follows the same verify-your-own-address flow as a local
+              account rather than Google's fully-managed one. */}
+          {(user.auth_provider === "local" || user.auth_provider === "facebook") &&
             (user.email_verified ? (
               <p className="profile-email-status profile-email-verified">
                 <span className="material-symbols-outlined">check_circle</span>

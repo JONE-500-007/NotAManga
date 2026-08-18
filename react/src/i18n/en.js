@@ -18,9 +18,11 @@ export default {
   "login.submit": "Sign in",
   "login.error": "Invalid username/email or password",
   "login.orGoogle": "Continue with Google",
+  "login.orFacebook": "Continue with Facebook",
   "login.registerPrompt": "Don't have an account? Register",
   "login.backToIndex": "Back to browsing",
   "login.googleError": "Google sign-in failed. Please try again.",
+  "login.facebookError": "Facebook sign-in failed. Please try again.",
   "login.forgotPassword": "Forgot password?",
   "login.resetSuccess": "Your password has been reset. Sign in with your new password.",
 
@@ -49,6 +51,7 @@ export default {
   "register.password": "Password",
   "register.submit": "Register",
   "register.orGoogle": "Register with Google",
+  "register.orFacebook": "Register with Facebook",
   "register.loginPrompt": "Already have an account? Sign in",
   "register.backToIndex": "Back to browsing",
 

@@ -18,9 +18,11 @@ export default {
   "login.submit": "เข้าสู่ระบบ",
   "login.error": "ชื่อผู้ใช้/อีเมล หรือรหัสผ่านไม่ถูกต้อง",
   "login.orGoogle": "เข้าสู่ระบบด้วย Google",
+  "login.orFacebook": "เข้าสู่ระบบด้วย Facebook",
   "login.registerPrompt": "ยังไม่มีบัญชี? สมัครสมาชิก",
   "login.backToIndex": "กลับไปหน้าแรก",
   "login.googleError": "เข้าสู่ระบบด้วย Google ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+  "login.facebookError": "เข้าสู่ระบบด้วย Facebook ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
   "login.forgotPassword": "ลืมรหัสผ่าน?",
   "login.resetSuccess": "รีเซ็ตรหัสผ่านเรียบร้อยแล้ว กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่",
 
@@ -49,6 +51,7 @@ export default {
   "register.password": "รหัสผ่าน",
   "register.submit": "สมัครสมาชิก",
   "register.orGoogle": "สมัครสมาชิกด้วย Google",
+  "register.orFacebook": "สมัครสมาชิกด้วย Facebook",
   "register.loginPrompt": "มีบัญชีอยู่แล้ว? เข้าสู่ระบบ",
   "register.backToIndex": "กลับไปหน้าแรก",
 
