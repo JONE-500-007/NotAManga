@@ -57,28 +57,34 @@ router.patch("/users/me", requireAuth, async (req, res) => {
 router.post("/users/me/avatar", requireAuth, avatarUpload.single("avatar"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "An image file is required" });
 
-  const existing = await pool.query("SELECT avatar_path FROM users WHERE id = $1", [req.user.id]);
-  await deleteUploadedFile(existing.rows[0]?.avatar_path);
-
+  // saveUserImage validates the upload (real magic-byte check) before ever
+  // touching disk — that has to happen *before* the old file is deleted, or
+  // a rejected re-upload (wrong file type, corrupt image, ...) leaves the
+  // account with no avatar at all instead of keeping the one it had.
   const avatarPath = await saveUserImage(req.file, req.user.id, AVATARS);
+
+  const existing = await pool.query("SELECT avatar_path FROM users WHERE id = $1", [req.user.id]);
   const result = await pool.query(
     `UPDATE users SET avatar_path = $1 WHERE id = $2 RETURNING ${SAFE_USER_COLUMNS}`,
     [avatarPath, req.user.id]
   );
+  await deleteUploadedFile(existing.rows[0]?.avatar_path);
   res.json(result.rows[0]);
 });
 
 router.post("/users/me/banner", requireAuth, bannerUpload.single("banner"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "An image file is required" });
 
-  const existing = await pool.query("SELECT banner_path FROM users WHERE id = $1", [req.user.id]);
-  await deleteUploadedFile(existing.rows[0]?.banner_path);
-
+  // See the avatar route above — validate/save the new file before deleting
+  // the old one, not after.
   const bannerPath = await saveUserImage(req.file, req.user.id, BANNERS);
+
+  const existing = await pool.query("SELECT banner_path FROM users WHERE id = $1", [req.user.id]);
   const result = await pool.query(
     `UPDATE users SET banner_path = $1 WHERE id = $2 RETURNING ${SAFE_USER_COLUMNS}`,
     [bannerPath, req.user.id]
   );
+  await deleteUploadedFile(existing.rows[0]?.banner_path);
   res.json(result.rows[0]);
 });
 

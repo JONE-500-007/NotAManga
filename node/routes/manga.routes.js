@@ -589,12 +589,14 @@ router.patch(
 
     const format = req.body.format === "comic" ? "comic" : "manga";
 
-    if (req.file) {
-      const existing = await pool.query("SELECT cover_path FROM manga WHERE id = $1", [mangaId]);
-      await deleteUploadedFile(existing.rows[0]?.cover_path);
-    }
-
+    // Validate/save the new cover (throws on a bad file) *before* touching
+    // the old one — deleting first meant a rejected re-upload (wrong file
+    // type, corrupt image, ...) left the manga with no cover at all instead
+    // of keeping the one it had.
     const coverPath = req.file ? await saveMangaImage(req.file, req.manga.work_type, mangaId, COVERS) : undefined;
+    const oldCoverPath = req.file
+      ? (await pool.query("SELECT cover_path FROM manga WHERE id = $1", [mangaId])).rows[0]?.cover_path
+      : undefined;
 
     const client = await pool.connect();
     try {
@@ -607,9 +609,15 @@ router.patch(
       );
       await replaceMangaSideTables(client, mangaId, { alternativeTitles, authors, artists, links });
       await client.query("COMMIT");
+      // Only now that the new cover is durably the manga's cover_path is the
+      // old file safe to remove.
+      if (oldCoverPath) await deleteUploadedFile(oldCoverPath);
       res.json({ ...result.rows[0], alternative_titles: alternativeTitles, authors, artists, links });
     } catch (err) {
       await client.query("ROLLBACK");
+      // The transaction never committed, so cover_path still points at
+      // oldCoverPath — the newly-saved file is the orphan here, not it.
+      if (coverPath) await deleteUploadedFile(coverPath);
       throw err;
     } finally {
       client.release();

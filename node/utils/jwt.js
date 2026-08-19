@@ -16,16 +16,23 @@ const COOKIE_OPTIONS = {
   maxAge: SESSION_DURATION_SECONDS * 1000,
 };
 
+// HS256 is fixed on both ends rather than left for jsonwebtoken to infer.
+// The installed version already rejects "alg: none" by default, but pinning
+// it here means verify() can never be tricked into accepting a token signed
+// with a different algorithm than sign() actually uses, on this version or
+// any future one.
+const ALGORITHM = "HS256";
+
 function sign(user) {
   return jwt.sign(
     { id: user.id, username: user.username, role: user.role },
     SECRET,
-    { expiresIn: SESSION_DURATION_SECONDS }
+    { expiresIn: SESSION_DURATION_SECONDS, algorithm: ALGORITHM }
   );
 }
 
 function verify(token) {
-  return jwt.verify(token, SECRET);
+  return jwt.verify(token, SECRET, { algorithms: [ALGORITHM] });
 }
 
 module.exports = { sign, verify, SESSION_DURATION_SECONDS, COOKIE_OPTIONS };

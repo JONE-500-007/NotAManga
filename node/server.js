@@ -14,6 +14,7 @@ const adminRoutes = require("./routes/admin.routes");
 const linkSitesRoutes = require("./routes/linkSites.routes");
 const linkPreviewRoutes = require("./routes/linkPreview.routes");
 const sitemapRoutes = require("./routes/sitemap.routes");
+const uploadAccessRoutes = require("./routes/uploadAccess.routes");
 const { toFriendlyError } = require("./utils/friendlyError");
 
 const app = express();
@@ -25,6 +26,11 @@ const app = express();
 app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
+// Must come before the static mount below: it claims /uploads/manga/... and
+// /uploads/novel/... to enforce each work's privacy before serving its
+// files, and only falls through to plain static serving (no privacy concept
+// — avatars, banners, defaults, link site icons) for everything else.
+app.use(uploadAccessRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.get("/", async (req, res) => {
