@@ -1,6 +1,5 @@
 const express = require("express");
 const cookieParser = require("cookie-parser");
-const path = require("path");
 const pool = require("./db/pool");
 const { initSchema } = require("./db/schema");
 const authRoutes = require("./routes/auth.routes");
@@ -26,13 +25,11 @@ const app = express();
 app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
-// Handles /uploads/manga/..., /uploads/novel/... (privacy-checked), and
-// /uploads/users/..., /uploads/link-site-icons/... (no privacy concept) by
-// redirecting to a short-lived signed R2 URL — see uploadAccess.routes.js.
-// Only uploads/defaults/ is still served straight off disk below: those are
-// shipped with the app itself, not user-uploaded, so they never moved to R2.
+// Handles every /uploads/... path — manga/novel (privacy-checked) and
+// everything else (avatars, banners, link site icons, static UI icons,
+// shipped defaults — no privacy concept) — by redirecting to a short-lived
+// signed R2 URL. See uploadAccess.routes.js.
 app.use(uploadAccessRoutes);
-app.use("/uploads/defaults", express.static(path.join(__dirname, "uploads", "defaults")));
 
 app.get("/", async (req, res) => {
   const result = await pool.query("SELECT NOW()");

@@ -10,16 +10,17 @@ const { getPresignedGetUrl } = require("../utils/r2Client");
 // R2 bucket is private, so nothing is fetchable at all without going through
 // this check first and getting a short-lived signed URL back.
 //
-// Everything else under uploads/ (avatars, banners, link site icons) carries
-// no privacy concept, so it skips straight to signing — same bucket, just no
-// visibility check first.
+// Everything else under uploads/ (avatars, banners, link site icons, static
+// UI icons like the OAuth buttons' logos and the site favicon, and the
+// shipped default avatar/banner) carries no privacy concept, so it skips
+// straight to signing — same bucket, just no visibility check first.
 const router = express.Router();
 
 // RegExp routes (rather than Express path-pattern strings) sidestep
 // path-to-regexp's wildcard/custom-regex syntax entirely, so these don't
 // need to track which syntax the installed Express major version expects.
 const UPLOAD_WORK_PATH = /^\/uploads\/(manga|novel)\/(\d+)\/(.+)$/;
-const UPLOAD_PUBLIC_PATH = /^\/uploads\/(users|link-site-icons)\/(.+)$/;
+const UPLOAD_PUBLIC_PATH = /^\/uploads\/(users|link-site-icons|image_icon|defaults)\/(.+)$/;
 
 router.get(UPLOAD_WORK_PATH, optionalAuth, async (req, res) => {
   const match = req.path.match(UPLOAD_WORK_PATH);

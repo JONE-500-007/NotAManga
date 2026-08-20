@@ -14,13 +14,12 @@ const UPLOADS_ROOT = path.join(__dirname, "..", "uploads");
 // other upload now.
 const LINK_SITE_ICONS_PREFIX = "link-site-icons";
 
-// Shipped with the app rather than uploaded, and shared by every account that
-// hasn't picked its own picture — so they can't live in any one user's
-// folder. Never moved to R2: these ship with the app image/repo, not
-// user-uploaded, so they're still served straight off disk (see server.js).
+// Shipped with the app rather than uploaded, and shared by every account
+// that hasn't picked its own picture — so they can't live in any one user's
+// folder. Served from R2 like everything else (see uploadAccess.routes.js);
+// this local copy is just the source scripts/upload-defaults.js reads from
+// when (re-)seeding the defaults/ prefix in the bucket.
 const DEFAULTS_DIR = path.join(UPLOADS_ROOT, "defaults");
-
-fs.mkdirSync(DEFAULTS_DIR, { recursive: true });
 
 // Shipped alongside the app (not user-uploaded), served by users who haven't
 // picked their own avatar/banner yet. Never pass these through
