@@ -3,29 +3,23 @@ const path = require("path");
 const crypto = require("crypto");
 const multer = require("multer");
 const { detectImageExtension } = require("../utils/imageValidation");
+const { putObject } = require("../utils/r2Client");
 
 const UPLOADS_ROOT = path.join(__dirname, "..", "uploads");
 
 // Belongs to no single work or account, so it stays top-level. Per-work files
-// live under uploads/{manga,novel}/<id>/ (utils/mangaStorage.js) and per-account
-// ones under uploads/users/<id>/ (utils/userStorage.js).
-const LINK_SITE_ICONS_DIR = path.join(UPLOADS_ROOT, "link-site-icons");
+// live under manga/{manga,novel}/<id>/ (utils/mangaStorage.js) and per-account
+// ones under users/<id>/ (utils/userStorage.js). This one's an R2 key prefix,
+// not a filesystem path — link site icons live in the bucket like every
+// other upload now.
+const LINK_SITE_ICONS_PREFIX = "link-site-icons";
 
 // Shipped with the app rather than uploaded, and shared by every account that
-// hasn't picked its own picture — so they can't live in any one user's folder.
+// hasn't picked its own picture — so they can't live in any one user's
+// folder. Never moved to R2: these ship with the app image/repo, not
+// user-uploaded, so they're still served straight off disk (see server.js).
 const DEFAULTS_DIR = path.join(UPLOADS_ROOT, "defaults");
 
-// The pre-reorganisation layout, where files were pooled in shared top-level
-// folders. Nothing writes here any more; the exports exist so
-// scripts/migrate-uploads.js can find what's left to move.
-const LEGACY_COVERS_DIR = path.join(UPLOADS_ROOT, "covers");
-const LEGACY_PAGES_DIR = path.join(UPLOADS_ROOT, "pages");
-const LEGACY_ART_DIR = path.join(UPLOADS_ROOT, "art");
-const LEGACY_NOVEL_IMAGES_DIR = path.join(UPLOADS_ROOT, "novel-images");
-const LEGACY_AVATARS_DIR = path.join(UPLOADS_ROOT, "avatars");
-const LEGACY_BANNERS_DIR = path.join(UPLOADS_ROOT, "banners");
-
-fs.mkdirSync(LINK_SITE_ICONS_DIR, { recursive: true });
 fs.mkdirSync(DEFAULTS_DIR, { recursive: true });
 
 // Shipped alongside the app (not user-uploaded), served by users who haven't
@@ -61,14 +55,15 @@ const linkSiteIconUpload = multer({ ...memoryUploadOptions, limits: { fileSize: 
 const chapterPagesUpload = multer({ ...memoryUploadOptions, limits: { fileSize: 10 * 1024 * 1024, files: 300 } });
 
 // Validates a single in-memory upload (multer memoryStorage's file.buffer)
-// and writes it to destDir under a fresh random name + the *detected*
-// extension. Never trust file.originalname's extension or file.mimetype —
-// both come straight from the client.
-async function saveValidatedImage(file, destDir) {
+// and writes it to R2 under keyPrefix/<uuid>.<detected extension>. Never
+// trust file.originalname's extension or file.mimetype — both come straight
+// from the client. Returns the public "/uploads/..." URL to store.
+async function saveValidatedImage(file, keyPrefix) {
   const ext = await detectImageExtension(file.buffer);
   const filename = `${crypto.randomUUID()}.${ext}`;
-  await fs.promises.writeFile(path.join(destDir, filename), file.buffer);
-  return filename;
+  const key = `${keyPrefix}/${filename}`;
+  await putObject(key, file.buffer, file.mimetype);
+  return `/uploads/${key}`;
 }
 
 module.exports = {
@@ -80,14 +75,8 @@ module.exports = {
   novelImageUpload,
   linkSiteIconUpload,
   saveValidatedImage,
-  LINK_SITE_ICONS_DIR,
+  LINK_SITE_ICONS_PREFIX,
   DEFAULTS_DIR,
-  LEGACY_COVERS_DIR,
-  LEGACY_PAGES_DIR,
-  LEGACY_ART_DIR,
-  LEGACY_NOVEL_IMAGES_DIR,
-  LEGACY_AVATARS_DIR,
-  LEGACY_BANNERS_DIR,
   UPLOADS_ROOT,
   DEFAULT_AVATAR_PATH,
   DEFAULT_BANNER_PATH,

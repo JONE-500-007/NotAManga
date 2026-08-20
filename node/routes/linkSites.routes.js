@@ -1,7 +1,7 @@
 const express = require("express");
 const pool = require("../db/pool");
 const { requireAuth, optionalAuth, requireRole } = require("../middleware/auth");
-const { linkSiteIconUpload, saveValidatedImage, LINK_SITE_ICONS_DIR } = require("../middleware/upload");
+const { linkSiteIconUpload, saveValidatedImage, LINK_SITE_ICONS_PREFIX } = require("../middleware/upload");
 const { deleteUploadedFile } = require("../utils/fileStorage");
 const { reorderRows } = require("../utils/reorder");
 const { assertMaxLength, MAX_TITLE_LENGTH } = require("../utils/validation");
@@ -31,9 +31,7 @@ router.post(
       return res.status(400).json({ error: `Category must be one of: ${LINK_CATEGORIES.join(", ")}` });
     }
 
-    const iconPath = req.file
-      ? `/uploads/link-site-icons/${await saveValidatedImage(req.file, LINK_SITE_ICONS_DIR)}`
-      : null;
+    const iconPath = req.file ? await saveValidatedImage(req.file, LINK_SITE_ICONS_PREFIX) : null;
 
     const maxResult = await pool.query(
       "SELECT COALESCE(MAX(position), 0) AS max FROM link_sites WHERE category = $1",
@@ -98,9 +96,7 @@ router.patch(
       const existing = await pool.query("SELECT icon_path FROM link_sites WHERE id = $1", [siteId]);
       await deleteUploadedFile(existing.rows[0]?.icon_path);
     }
-    const iconPath = req.file
-      ? `/uploads/link-site-icons/${await saveValidatedImage(req.file, LINK_SITE_ICONS_DIR)}`
-      : undefined;
+    const iconPath = req.file ? await saveValidatedImage(req.file, LINK_SITE_ICONS_PREFIX) : undefined;
 
     const result = await pool.query(
       "UPDATE link_sites SET name = $1, icon_path = COALESCE($2, icon_path) WHERE id = $3 RETURNING *",

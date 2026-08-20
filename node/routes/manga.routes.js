@@ -1,5 +1,4 @@
 const express = require("express");
-const fs = require("fs/promises");
 const pool = require("../db/pool");
 const { requireAuth, optionalAuth, requireRole, requireMangaOwner } = require("../middleware/auth");
 const {
@@ -11,15 +10,8 @@ const {
 const { savePageFiles } = require("../utils/pageStorage");
 const { saveNovelBlocks } = require("../utils/novelBlocks");
 const { reorderRows } = require("../utils/reorder");
-const { reorderChapters, renameChapterFolder } = require("../utils/chapterReorder");
-const {
-  saveMangaImage,
-  removeMangaDir,
-  removeChapterDir,
-  chapterDir,
-  COVERS,
-  ART,
-} = require("../utils/mangaStorage");
+const { reorderChapters } = require("../utils/chapterReorder");
+const { saveMangaImage, removeMangaDir, removeChapterDir, COVERS, ART } = require("../utils/mangaStorage");
 const { deleteUploadedFile } = require("../utils/fileStorage");
 const { DEFAULT_AVATAR_PATH } = require("../middleware/upload");
 const { visibilityFilter, canViewManga } = require("../utils/mangaVisibility");
@@ -655,7 +647,7 @@ router.post(
     }
 
     const client = await pool.connect();
-    let createdChapterDir;
+    let createdChapterId;
     try {
       await client.query("BEGIN");
 
@@ -671,12 +663,11 @@ router.post(
       );
       const chapter = chapterResult.rows[0];
 
-      createdChapterDir = chapterDir(req.manga.work_type, mangaId, chapter.chapter_number);
+      createdChapterId = chapter.id;
       await savePageFiles(client, {
         chapterId: chapter.id,
         workType: req.manga.work_type,
         mangaId,
-        chapterNumber: chapter.chapter_number,
         files: req.files,
         startPageNumber: 1,
       });
@@ -685,8 +676,8 @@ router.post(
       res.status(201).json(chapter);
     } catch (err) {
       await client.query("ROLLBACK");
-      if (createdChapterDir) {
-        await fs.rm(createdChapterDir, { recursive: true, force: true }).catch(() => {});
+      if (createdChapterId) {
+        await removeChapterDir(req.manga.work_type, mangaId, createdChapterId).catch(() => {});
       }
       throw err;
     } finally {
@@ -832,10 +823,9 @@ router.patch(
     try {
       await client.query("BEGIN");
       // Not the generic reorderRows: chapter numbers are reader-facing (5.5
-      // side stories and the like) and name the folders their pages live in,
-      // so they get permuted rather than renumbered, and the matching
-      // directories move with them. See utils/chapterReorder.js.
-      await reorderChapters(client, { workType: req.manga.work_type, mangaId, orderedChapterIds });
+      // side stories and the like), so they get permuted rather than
+      // renumbered to 1..N. See utils/chapterReorder.js.
+      await reorderChapters(client, { mangaId, orderedChapterIds });
       await client.query("COMMIT");
       res.json({ ok: true });
     } catch (err) {
@@ -863,28 +853,14 @@ router.patch(
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      const existing = await client.query(
-        "SELECT chapter_number FROM chapters WHERE id = $1 AND manga_id = $2",
-        [chapterId, mangaId]
-      );
-      if (existing.rows.length === 0) {
-        await client.query("ROLLBACK");
-        return res.status(404).json({ error: "Chapter not found" });
-      }
-
       const result = await client.query(
         "UPDATE chapters SET chapter_number = $1, title = $2, volume = $3 WHERE id = $4 AND manga_id = $5 RETURNING *",
         [chapter_number, title || null, volume || null, chapterId, mangaId]
       );
-      // The number names this chapter's page folder, so renumbering by hand
-      // has to carry the files across the same way a drag-reorder does.
-      await renameChapterFolder(client, {
-        workType: req.manga.work_type,
-        mangaId,
-        chapterId,
-        fromNumber: existing.rows[0].chapter_number,
-        toNumber: chapter_number,
-      });
+      if (result.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({ error: "Chapter not found" });
+      }
       await client.query("COMMIT");
       res.json(result.rows[0]);
     } catch (err) {
@@ -907,13 +883,13 @@ router.delete(
       "SELECT image_path FROM novel_blocks WHERE chapter_id = $1 AND block_type = 'image'",
       [chapterId]
     );
-    const result = await pool.query(
-      "DELETE FROM chapters WHERE id = $1 AND manga_id = $2 RETURNING id, chapter_number",
-      [chapterId, mangaId]
-    );
+    const result = await pool.query("DELETE FROM chapters WHERE id = $1 AND manga_id = $2 RETURNING id", [
+      chapterId,
+      mangaId,
+    ]);
     if (result.rows.length === 0) return res.status(404).json({ error: "Chapter not found" });
 
-    await removeChapterDir(req.manga.work_type, mangaId, result.rows[0].chapter_number);
+    await removeChapterDir(req.manga.work_type, mangaId, chapterId);
     await Promise.all(novelImagesResult.rows.map((r) => deleteUploadedFile(r.image_path)));
     res.json({ ok: true });
   }
@@ -993,7 +969,7 @@ router.post(
       return res.status(400).json({ error: "At least one page image is required" });
     }
 
-    const chapterCheck = await pool.query("SELECT id, chapter_number FROM chapters WHERE id = $1", [chapterId]);
+    const chapterCheck = await pool.query("SELECT id FROM chapters WHERE id = $1", [chapterId]);
     if (chapterCheck.rows.length === 0) return res.status(404).json({ error: "Chapter not found" });
 
     const maxResult = await pool.query(
@@ -1009,7 +985,6 @@ router.post(
         chapterId,
         workType: req.manga.work_type,
         mangaId,
-        chapterNumber: chapterCheck.rows[0].chapter_number,
         files: req.files,
         startPageNumber,
       });

@@ -2,27 +2,24 @@ const express = require("express");
 const pool = require("../db/pool");
 const { optionalAuth } = require("../middleware/auth");
 const { canViewManga } = require("../utils/mangaVisibility");
-const { mangaDir } = require("../utils/mangaStorage");
+const { getPresignedGetUrl } = require("../utils/r2Client");
 
 // Everything under uploads/manga/<id>/... and uploads/novel/<id>/... belongs
 // to a specific work and has to respect that work's privacy the same way the
-// JSON API does (is_private / manga_visible_roles / uploader / admin) — a
-// bare express.static mount can't do that, it has no concept of "this file
-// belongs to a manga the requester isn't allowed to see". Without this route
-// intercepting those paths first, a private or admin-banned manga's page
-// images stay fetchable by anyone who ever saw the URL, forever, regardless
-// of what the manga's visibility says.
+// JSON API does (is_private / manga_visible_roles / uploader / admin) — the
+// R2 bucket is private, so nothing is fetchable at all without going through
+// this check first and getting a short-lived signed URL back.
 //
-// Everything else under uploads/ (avatars, banners, defaults, link site
-// icons) carries no privacy concept and keeps using the plain
-// express.static mount in server.js — this router only needs to claim the
-// two prefixes that do.
+// Everything else under uploads/ (avatars, banners, link site icons) carries
+// no privacy concept, so it skips straight to signing — same bucket, just no
+// visibility check first.
 const router = express.Router();
 
-// A RegExp route (rather than an Express path-pattern string) sidesteps
-// path-to-regexp's wildcard/custom-regex syntax entirely, so this doesn't
+// RegExp routes (rather than Express path-pattern strings) sidestep
+// path-to-regexp's wildcard/custom-regex syntax entirely, so these don't
 // need to track which syntax the installed Express major version expects.
 const UPLOAD_WORK_PATH = /^\/uploads\/(manga|novel)\/(\d+)\/(.+)$/;
+const UPLOAD_PUBLIC_PATH = /^\/uploads\/(users|link-site-icons)\/(.+)$/;
 
 router.get(UPLOAD_WORK_PATH, optionalAuth, async (req, res) => {
   const match = req.path.match(UPLOAD_WORK_PATH);
@@ -47,13 +44,15 @@ router.get(UPLOAD_WORK_PATH, optionalAuth, async (req, res) => {
 
   if (!canViewManga(req.user, manga, visibleRoles)) return res.status(404).end();
 
-  // sendFile's `root` option resolves relPath against it and refuses to
-  // serve anything that would land outside that directory — defense in
-  // depth on top of the /(.+)$/ capture above already having come from a
-  // known-numeric, DB-verified manga id.
-  res.sendFile(relPath, { root: mangaDir(workType, mangaId) }, (err) => {
-    if (err && !res.headersSent) res.status(404).end();
-  });
+  const url = await getPresignedGetUrl(`${workType}/${mangaId}/${relPath}`);
+  res.redirect(url);
+});
+
+router.get(UPLOAD_PUBLIC_PATH, async (req, res) => {
+  const match = req.path.match(UPLOAD_PUBLIC_PATH);
+  const [, kind, relPath] = match;
+  const url = await getPresignedGetUrl(`${kind}/${relPath}`);
+  res.redirect(url);
 });
 
 module.exports = router;

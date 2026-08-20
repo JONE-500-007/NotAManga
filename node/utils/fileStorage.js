@@ -1,11 +1,8 @@
-const fs = require("fs/promises");
-const path = require("path");
-const { UPLOADS_ROOT } = require("../middleware/upload");
+const { deleteObject, toR2Key } = require("./r2Client");
 
 function deleteUploadedFile(publicPath) {
   if (!publicPath) return Promise.resolve();
-  const relative = publicPath.replace(/^\/uploads\//, "");
-  return fs.unlink(path.join(UPLOADS_ROOT, relative)).catch(() => {});
+  return deleteObject(toR2Key(publicPath)).catch(() => {});
 }
 
 module.exports = { deleteUploadedFile };

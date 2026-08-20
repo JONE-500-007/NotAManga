@@ -26,12 +26,13 @@ const app = express();
 app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
-// Must come before the static mount below: it claims /uploads/manga/... and
-// /uploads/novel/... to enforce each work's privacy before serving its
-// files, and only falls through to plain static serving (no privacy concept
-// — avatars, banners, defaults, link site icons) for everything else.
+// Handles /uploads/manga/..., /uploads/novel/... (privacy-checked), and
+// /uploads/users/..., /uploads/link-site-icons/... (no privacy concept) by
+// redirecting to a short-lived signed R2 URL — see uploadAccess.routes.js.
+// Only uploads/defaults/ is still served straight off disk below: those are
+// shipped with the app itself, not user-uploaded, so they never moved to R2.
 app.use(uploadAccessRoutes);
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/uploads/defaults", express.static(path.join(__dirname, "uploads", "defaults")));
 
 app.get("/", async (req, res) => {
   const result = await pool.query("SELECT NOW()");

@@ -4,15 +4,15 @@
 //
 // Picks the given manga (or the one with the most chapters), swaps its two
 // newest chapters, asserts that the numbers were permuted rather than
-// renumbered, that pages.image_path followed, and that the folders on disk
-// moved to match — then puts everything back exactly as it was.
+// renumbered and that every page's stored path is byte-for-byte unchanged
+// (chapter folders are keyed by chapter id now, not chapter number, so a
+// reorder is pure DB work — nothing about a page's path should ever move)
+// — then puts everything back exactly as it was.
 //
 // Read-only in effect: whatever it changes, it reverses before exiting.
 
-const fs = require("fs/promises");
 const pool = require("../db/pool");
 const { reorderChapters } = require("../utils/chapterReorder");
-const { chapterDir } = require("../utils/mangaStorage");
 
 let failures = 0;
 function check(label, actual, expected) {
@@ -22,31 +22,22 @@ function check(label, actual, expected) {
   if (!ok) console.log(`      got      ${JSON.stringify(actual)}\n      expected ${JSON.stringify(expected)}`);
 }
 
-async function dirExists(p) {
-  try {
-    await fs.access(p);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 async function snapshot(mangaId) {
   const { rows } = await pool.query(
     `SELECT c.id, c.chapter_number,
             (SELECT COUNT(*) FROM pages p WHERE p.chapter_id = c.id) AS page_count,
-            (SELECT MIN(p.image_path) FROM pages p WHERE p.chapter_id = c.id) AS sample_path
+            (SELECT array_agg(p.image_path ORDER BY p.page_number) FROM pages p WHERE p.chapter_id = c.id) AS paths
        FROM chapters c WHERE c.manga_id = $1 ORDER BY c.chapter_number ASC`,
     [mangaId]
   );
   return rows;
 }
 
-async function applyOrder(workType, mangaId, orderedChapterIds) {
+async function applyOrder(mangaId, orderedChapterIds) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    await reorderChapters(client, { workType, mangaId, orderedChapterIds });
+    await reorderChapters(client, { mangaId, orderedChapterIds });
     await client.query("COMMIT");
   } catch (err) {
     await client.query("ROLLBACK");
@@ -68,14 +59,10 @@ async function main() {
   }
   if (!mangaId) throw new Error("No manga with chapters found to test against.");
 
-  const workTypeResult = await pool.query("SELECT work_type FROM manga WHERE id = $1", [mangaId]);
-  const workType = workTypeResult.rows[0]?.work_type;
-  if (!workType) throw new Error(`No manga with id ${mangaId}.`);
-
   const before = await snapshot(mangaId);
   if (before.length < 2) throw new Error(`Manga ${mangaId} has fewer than 2 chapters.`);
 
-  console.log(`Testing ${workType} ${mangaId} — ${before.length} chapters`);
+  console.log(`Testing manga ${mangaId} — ${before.length} chapters`);
   console.log(`Numbers before: ${before.map((c) => c.chapter_number).join(", ")}\n`);
 
   const ascIds = before.map((c) => c.id);
@@ -90,11 +77,8 @@ async function main() {
 
   const a = before[before.length - 2];
   const b = before[before.length - 1];
-  const dirABefore = chapterDir(workType, mangaId, a.chapter_number);
-  const dirBBefore = chapterDir(workType, mangaId, b.chapter_number);
-  const aHadDir = await dirExists(dirABefore);
 
-  await applyOrder(workType, mangaId, swapped);
+  await applyOrder(mangaId, swapped);
 
   const after = await snapshot(mangaId);
   const numbersAfter = after.map((c) => String(Number(c.chapter_number)));
@@ -118,36 +102,22 @@ async function main() {
     before.map((c) => Number(c.page_count)).sort((x, y) => x - y)
   );
 
-  // 4. Stored paths point at the folder matching each chapter's new number.
-  const mismatched = after
-    .filter((c) => c.sample_path)
-    .filter((c) => !c.sample_path.startsWith(`/uploads/${workType}/${mangaId}/chapters/${Number(c.chapter_number)}/`));
-  check("every page path matches its chapter's new number", mismatched.map((c) => c.sample_path), []);
-
-  // 5. The folders on disk moved with them.
-  if (aHadDir) {
-    check("chapter A's folder now sits at B's old number", await dirExists(dirBBefore), true);
-    const strays = (await fs
-      .readdir(chapterDir(workType, mangaId, a.chapter_number).replace(/[^/\\]+$/, ""))
-      .catch(() => []))
-      .filter((n) => n.startsWith(".reorder-"));
-    check("no .reorder-* staging folders left behind", strays, []);
-  } else {
-    console.log("SKIP  folder assertions — this chapter has no page directory (novel chapter)");
-  }
+  // 4. Every page's stored path is byte-for-byte identical to before — a
+  //    chapter's R2 key prefix is its id, which a reorder never touches.
+  // Sorted by chapter id (not the snapshot's chapter_number order, which the
+  // reorder deliberately changes for two rows) so this compares each
+  // chapter's own paths, not incidental row position.
+  const byIdSorted = (rows) => rows.map((c) => [c.id, c.paths]).sort((x, y) => x[0] - y[0]);
+  check("page paths are completely unchanged by the reorder", byIdSorted(after), byIdSorted(before));
 
   // Put it back.
-  await applyOrder(workType, mangaId, ascIds);
+  await applyOrder(mangaId, ascIds);
   const restored = await snapshot(mangaId);
   check(
     "restored to the original order",
     restored.map((c) => [c.id, String(Number(c.chapter_number))]),
     before.map((c) => [c.id, String(Number(c.chapter_number))])
   );
-  const restoredPaths = restored
-    .filter((c) => c.sample_path)
-    .filter((c) => !c.sample_path.startsWith(`/uploads/${workType}/${mangaId}/chapters/${Number(c.chapter_number)}/`));
-  check("restored page paths are consistent again", restoredPaths.map((c) => c.sample_path), []);
 
   console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) FAILED.`);
   return failures;

@@ -1,9 +1,8 @@
-const fs = require("fs/promises");
-const path = require("path");
 const crypto = require("crypto");
 const { detectImageExtension } = require("./imageValidation");
 const { assertText, MAX_NOVEL_BLOCKS_PER_CHAPTER, MAX_BLOCK_TEXT_LENGTH } = require("./validation");
-const { mangaKindDir, mangaFileUrl, NOVEL } = require("./mangaStorage");
+const { mangaFileUrl, NOVEL } = require("./mangaStorage");
+const { putObject, deleteObject, toR2Key } = require("./r2Client");
 
 // Inserts a chapter's ordered content blocks. Each block is either
 // {type: "text", content} or {type: "image", existingPath?}. Image blocks
@@ -22,7 +21,6 @@ const { mangaKindDir, mangaFileUrl, NOVEL } = require("./mangaStorage");
 // later block fails, any files already written by this call are removed
 // again since the caller's DB rollback can't undo them.
 async function saveNovelBlocks(client, { chapterId, workType, mangaId, blocks, files }) {
-  const destDir = mangaKindDir(workType, mangaId, NOVEL);
   if (blocks.length > MAX_NOVEL_BLOCKS_PER_CHAPTER) {
     const err = new Error(`A chapter can have at most ${MAX_NOVEL_BLOCKS_PER_CHAPTER} content blocks`);
     err.status = 400;
@@ -34,7 +32,7 @@ async function saveNovelBlocks(client, { chapterId, workType, mangaId, blocks, f
     }
   }
 
-  const writtenPaths = [];
+  const writtenUrls = [];
   let fileIndex = 0;
   try {
     for (let i = 0; i < blocks.length; i++) {
@@ -53,11 +51,9 @@ async function saveNovelBlocks(client, { chapterId, workType, mangaId, blocks, f
           if (!file) throw new Error("Missing image file for an image block");
           const ext = await detectImageExtension(file.buffer);
           const filename = `${crypto.randomUUID()}.${ext}`;
-          const filePath = path.join(destDir, filename);
-          await fs.mkdir(destDir, { recursive: true });
-          await fs.writeFile(filePath, file.buffer);
-          writtenPaths.push(filePath);
           imagePath = mangaFileUrl(workType, mangaId, NOVEL, filename);
+          await putObject(toR2Key(imagePath), file.buffer, file.mimetype);
+          writtenUrls.push(imagePath);
         }
         await client.query(
           "INSERT INTO novel_blocks (chapter_id, position, block_type, image_path) VALUES ($1, $2, 'image', $3)",
@@ -68,7 +64,7 @@ async function saveNovelBlocks(client, { chapterId, workType, mangaId, blocks, f
       }
     }
   } catch (err) {
-    await Promise.all(writtenPaths.map((p) => fs.unlink(p).catch(() => {})));
+    await Promise.all(writtenUrls.map((url) => deleteObject(toR2Key(url)).catch(() => {})));
     throw err;
   }
 }

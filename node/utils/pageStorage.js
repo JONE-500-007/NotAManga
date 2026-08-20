@@ -1,16 +1,12 @@
-const fs = require("fs/promises");
-const path = require("path");
 const crypto = require("crypto");
 const { detectImageExtension } = require("./imageValidation");
-const { chapterDir, chapterPageUrl } = require("./mangaStorage");
+const { chapterPageUrl } = require("./mangaStorage");
+const { putObject, toR2Key } = require("./r2Client");
 
-// Pages live under the manga's own folder, keyed by the chapter *number* the
-// reader sees rather than the chapter id — so mangaId/chapterNumber, not just
-// a chapterId, is what locates them. See utils/mangaStorage.js.
-async function savePageFiles(client, { chapterId, workType, mangaId, chapterNumber, files, startPageNumber }) {
-  const destDir = chapterDir(workType, mangaId, chapterNumber);
-  await fs.mkdir(destDir, { recursive: true });
-
+// Pages live under the chapter's own R2 key prefix, keyed by chapter *id*
+// (immutable) rather than the reader-facing chapter number — see
+// utils/mangaStorage.js for why.
+async function savePageFiles(client, { chapterId, workType, mangaId, files, startPageNumber }) {
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
     const pageNumber = startPageNumber + i;
@@ -18,10 +14,11 @@ async function savePageFiles(client, { chapterId, workType, mangaId, chapterNumb
     // client-supplied originalname/mimetype — see utils/imageValidation.js.
     const ext = await detectImageExtension(file.buffer);
     const filename = `${crypto.randomUUID()}.${ext}`;
-    await fs.writeFile(path.join(destDir, filename), file.buffer);
+    const url = chapterPageUrl(workType, mangaId, chapterId, filename);
+    await putObject(toR2Key(url), file.buffer, file.mimetype);
     await client.query(
       "INSERT INTO pages (chapter_id, page_number, image_path) VALUES ($1, $2, $3)",
-      [chapterId, pageNumber, chapterPageUrl(workType, mangaId, chapterNumber, filename)]
+      [chapterId, pageNumber, url]
     );
   }
 }
