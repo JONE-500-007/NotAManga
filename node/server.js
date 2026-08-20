@@ -11,6 +11,7 @@ const tagRoutes = require("./routes/tag.routes");
 const listRoutes = require("./routes/list.routes");
 const adminRoutes = require("./routes/admin.routes");
 const linkSitesRoutes = require("./routes/linkSites.routes");
+const announcementRoutes = require("./routes/announcement.routes");
 const linkPreviewRoutes = require("./routes/linkPreview.routes");
 const sitemapRoutes = require("./routes/sitemap.routes");
 const uploadAccessRoutes = require("./routes/uploadAccess.routes");
@@ -45,6 +46,7 @@ app.use("/api", tagRoutes);
 app.use("/api", listRoutes);
 app.use("/api", adminRoutes);
 app.use("/api", linkSitesRoutes);
+app.use("/api", announcementRoutes);
 // Bare (non-/api) paths matching the public share URLs — nginx only routes
 // known bot user-agents here in production; see linkPreview.routes.js.
 app.use("/", linkPreviewRoutes);

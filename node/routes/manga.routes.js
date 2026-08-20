@@ -110,8 +110,11 @@ async function fetchMangaSideTables(mangaId) {
 
 router.get("/manga", optionalAuth, async (req, res) => {
   // Pinned manga (admin-ordered) float to the front in the order the admin
-  // set; everything else keeps the normal auto sort by upload date. Tags
-  // are included so the browse page can search by tag name, not just title.
+  // set; everything else keeps the normal auto sort by upload date. Tags,
+  // credits and alternative titles are included so the browse page can
+  // search across all of them, not just the main title — the whole catalog
+  // is already sent to the client here, so this stays one query rather than
+  // a search endpoint per keystroke.
   const visibility = visibilityFilter(req.user, 1);
   const result = await pool.query(
     `SELECT m.id, m.title, m.cover_path, m.pinned_position, m.is_private,
@@ -119,7 +122,22 @@ router.get("/manga", optionalAuth, async (req, res) => {
               (SELECT json_agg(json_build_object('id', t.id, 'name', t.name) ORDER BY mt.position)
                FROM manga_tags mt JOIN tags t ON t.id = mt.tag_id WHERE mt.manga_id = m.id),
               '[]'
-            ) AS tags
+            ) AS tags,
+            COALESCE(
+              (SELECT json_agg(mc.name ORDER BY mc.position)
+               FROM manga_credits mc WHERE mc.manga_id = m.id AND mc.kind = 'author'),
+              '[]'
+            ) AS authors,
+            COALESCE(
+              (SELECT json_agg(mc.name ORDER BY mc.position)
+               FROM manga_credits mc WHERE mc.manga_id = m.id AND mc.kind = 'artist'),
+              '[]'
+            ) AS artists,
+            COALESCE(
+              (SELECT json_agg(mat.title ORDER BY mat.position)
+               FROM manga_alternative_titles mat WHERE mat.manga_id = m.id),
+              '[]'
+            ) AS alternative_titles
      FROM manga m
      WHERE ${visibility.clause}
      ORDER BY m.pinned_position IS NULL ASC, m.pinned_position ASC, m.created_at DESC`,

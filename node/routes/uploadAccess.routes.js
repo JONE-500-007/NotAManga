@@ -46,6 +46,10 @@ router.get(UPLOAD_WORK_PATH, optionalAuth, async (req, res) => {
   if (!canViewManga(req.user, manga, visibleRoles)) return res.status(404).end();
 
   const url = await getPresignedGetUrl(`${workType}/${mangaId}/${relPath}`);
+  // The signed URL expires in a few minutes, so this redirect must never be
+  // cached (by Cloudflare's edge or the browser) — a cached redirect would
+  // hand out an already-expired signature and R2 would reject it.
+  res.set("Cache-Control", "no-store");
   res.redirect(url);
 });
 
@@ -53,6 +57,7 @@ router.get(UPLOAD_PUBLIC_PATH, async (req, res) => {
   const match = req.path.match(UPLOAD_PUBLIC_PATH);
   const [, kind, relPath] = match;
   const url = await getPresignedGetUrl(`${kind}/${relPath}`);
+  res.set("Cache-Control", "no-store");
   res.redirect(url);
 });
 

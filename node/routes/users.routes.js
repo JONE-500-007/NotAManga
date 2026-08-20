@@ -6,6 +6,7 @@ const { saveUserImage, AVATARS, BANNERS } = require("../utils/userStorage");
 const { deleteUploadedFile } = require("../utils/fileStorage");
 const { SAFE_USER_COLUMNS, PUBLIC_USER_COLUMNS } = require("../utils/userColumns");
 const { visibilityFilter } = require("../utils/mangaVisibility");
+const { reorderRows } = require("../utils/reorder");
 const { assertMaxLength, MAX_DISPLAY_NAME_LENGTH, MAX_BIO_LENGTH } = require("../utils/validation");
 
 const router = express.Router();
@@ -17,12 +18,103 @@ router.get("/users/:userId", optionalAuth, async (req, res) => {
   if (!user) return res.status(404).json({ error: "User not found" });
 
   const visibility = visibilityFilter(req.user, 2);
+  // Same shape as the admin "All Manga" pins: a work the uploader pinned
+  // floats to the front in the order they arranged, everything else keeps
+  // the default newest-first.
   const worksResult = await pool.query(
-    `SELECT id, title, cover_path, is_private FROM manga m
-     WHERE uploader_id = $1 AND ${visibility.clause} ORDER BY created_at DESC`,
+    `SELECT id, title, cover_path, is_private, profile_pin_position FROM manga m
+     WHERE uploader_id = $1 AND ${visibility.clause}
+     ORDER BY profile_pin_position IS NULL ASC, profile_pin_position ASC, created_at DESC`,
     [userId, ...visibility.params]
   );
-  res.json({ ...user, works: worksResult.rows });
+
+  // Only lists the owner opted into showing, and never a private one (the
+  // DB already refuses that combination — see list.routes.js — but the
+  // is_private check here keeps this correct even for rows predating it).
+  const listsResult = await pool.query(
+    `SELECT id, title, description FROM manga_lists
+      WHERE user_id = $1 AND show_on_profile = true AND is_private = false
+      ORDER BY position ASC NULLS LAST, created_at DESC`,
+    [userId]
+  );
+  const lists = listsResult.rows;
+  for (const list of lists) {
+    const previewResult = await pool.query(
+      `SELECT m.id, m.title, m.cover_path FROM manga_list_items mli
+       JOIN manga m ON m.id = mli.manga_id
+       WHERE mli.list_id = $1 AND ${visibility.clause}
+       ORDER BY mli.position ASC NULLS LAST, mli.added_at DESC LIMIT 6`,
+      [list.id, ...visibility.params]
+    );
+    const countResult = await pool.query(
+      `SELECT COUNT(*) AS count FROM manga_list_items mli
+       JOIN manga m ON m.id = mli.manga_id
+       WHERE mli.list_id = $1 AND ${visibility.clause}`,
+      [list.id, ...visibility.params]
+    );
+    list.preview = previewResult.rows;
+    list.manga_count = Number(countResult.rows[0].count);
+  }
+
+  res.json({ ...user, works: worksResult.rows, lists });
+});
+
+// Pinning a work to the uploader's own profile. Mirrors the admin
+// /manga/:id/pin pair, but scoped to the caller's own uploads — an uploader
+// arranges their profile, an admin arranges the front page.
+router.patch("/users/me/works/:mangaId/pin", requireAuth, async (req, res) => {
+  const { mangaId } = req.params;
+  const maxResult = await pool.query(
+    "SELECT COALESCE(MAX(profile_pin_position), 0) AS max FROM manga WHERE uploader_id = $1",
+    [req.user.id]
+  );
+  const position = Number(maxResult.rows[0].max) + 1;
+
+  const result = await pool.query(
+    `UPDATE manga SET profile_pin_position = $1 WHERE id = $2 AND uploader_id = $3
+     RETURNING id, title, cover_path, is_private, profile_pin_position`,
+    [position, mangaId, req.user.id]
+  );
+  if (result.rows.length === 0) return res.status(404).json({ error: "Work not found" });
+  res.json(result.rows[0]);
+});
+
+router.delete("/users/me/works/:mangaId/pin", requireAuth, async (req, res) => {
+  const { mangaId } = req.params;
+  const result = await pool.query(
+    "UPDATE manga SET profile_pin_position = NULL WHERE id = $1 AND uploader_id = $2 RETURNING id",
+    [mangaId, req.user.id]
+  );
+  if (result.rows.length === 0) return res.status(404).json({ error: "Work not found" });
+  res.json({ ok: true });
+});
+
+router.patch("/users/me/works/reorder", requireAuth, async (req, res) => {
+  const { orderedMangaIds } = req.body;
+  if (!Array.isArray(orderedMangaIds) || orderedMangaIds.length === 0) {
+    return res.status(400).json({ error: "orderedMangaIds is required" });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    // parentColumn scopes every UPDATE to the caller's own uploads, so an id
+    // that isn't theirs matches no row instead of repinning someone else's.
+    await reorderRows(client, {
+      table: "manga",
+      numberColumn: "profile_pin_position",
+      parentColumn: "uploader_id",
+      parentId: req.user.id,
+      orderedIds: orderedMangaIds,
+    });
+    await client.query("COMMIT");
+    res.json({ ok: true });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 });
 
 router.patch("/users/me", requireAuth, async (req, res) => {

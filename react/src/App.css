@@ -521,6 +521,40 @@
   font-size: 16px;
 }
 
+/* Opposite corner from the private-lock badge — both can appear on the same
+   card (a private, pinned work) without overlapping. A read-only <span> for
+   every viewer once a work is pinned; MangaCard renders it as a <button>
+   instead only in profile arrange mode. */
+.manga-card-pin-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(20, 21, 26, 0.75);
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 19px;
+  border: none;
+  padding: 0;
+}
+
+button.manga-card-pin-badge {
+  cursor: pointer;
+  transition: transform 0.1s ease, color 0.15s ease;
+}
+
+button.manga-card-pin-badge:hover {
+  transform: scale(1.1);
+}
+
+.manga-card-pin-badge-active {
+  color: var(--accent);
+}
+
 .manga-card-cover img {
   width: 100%;
   height: 100%;
@@ -3627,22 +3661,43 @@ textarea.markdown-field:focus,
 
 .library-card-preview {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   overflow-x: auto;
   padding-bottom: 2px;
 }
 
+/* Each preview is a labelled cover rather than a bare thumbnail, so a list
+   can be identified by its contents without opening it. The fixed width is
+   what keeps the caption from stretching the row. */
+.library-preview-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 104px;
+  flex-shrink: 0;
+}
+
 .library-card-preview img,
 .library-card-preview-placeholder {
-  width: 64px;
+  width: 100%;
   aspect-ratio: 2 / 3;
-  border-radius: 4px;
+  border-radius: 6px;
   object-fit: cover;
-  flex-shrink: 0;
 }
 
 .library-card-preview-placeholder {
   background: linear-gradient(135deg, var(--surface-alt), var(--border));
+}
+
+.library-preview-title {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--text-muted);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
 }
 
 .library-detail-header {
@@ -3681,6 +3736,25 @@ textarea.markdown-field:focus,
 
 .library-manga-tile .btn {
   width: 100%;
+}
+
+.library-manga-tile-arranging {
+  padding-top: 4px;
+}
+
+.library-manga-tile-arranging .drag-handle {
+  align-self: center;
+}
+
+.library-manga-tile-dragging {
+  opacity: 0.5;
+}
+
+.library-manga-tile-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .manga-library-menu {
@@ -4376,5 +4450,398 @@ a.dashboard-rank-row:hover {
   }
   .line-chart-line-revealed {
     transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Announcements (browse page + admin manager)
+   ------------------------------------------------------------------------ */
+
+.announcement-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.announcement {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  background: var(--surface);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.announcement-toggleable {
+  cursor: pointer;
+}
+
+.announcement-toggleable:hover {
+  border-color: var(--accent);
+  background: var(--surface-alt);
+}
+
+.announcement-icon {
+  color: var(--accent);
+  font-size: 22px;
+  line-height: 1.3;
+  flex-shrink: 0;
+}
+
+.announcement-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.announcement-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Clipped to roughly two lines by default, lifted when expanded. This uses
+   max-height rather than -webkit-line-clamp on purpose: the body is rendered
+   markdown, so its text sits inside a child <p>, and line-clamp needs the
+   text to be inline content of the clamping element itself — with a block
+   child it silently fails to clamp. A height cap works whatever the markup
+   is, and (unlike line-clamp) it can actually be transitioned. */
+.announcement-body {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow: hidden;
+  max-height: 3em;
+  overflow-wrap: anywhere;
+}
+
+/* Markdown's outer <p> margins would otherwise count against the height cap
+   and push the visible text out of the clipped area. */
+.announcement-body > :first-child {
+  margin-top: 0;
+}
+
+.announcement-body > :last-child {
+  margin-bottom: 0;
+}
+
+/* Deliberately NOT a max-height transition. AnnouncementBanner keeps a
+   ResizeObserver on this same element to decide whether the clamp is
+   actually hiding anything, and animating the observed box's own height
+   feeds every intermediate frame back into that observer — in practice the
+   transition then never settles and the body stays stuck at its collapsed
+   height. Opacity/transform are composited and don't change the observed
+   content-box size, so the reveal still animates without that feedback. */
+.announcement.announcement-expanded .announcement-body {
+  max-height: 40em;
+  animation: announcement-reveal 0.22s ease;
+}
+
+@keyframes announcement-reveal {
+  from {
+    opacity: 0.4;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Pointer devices get the same reveal on hover, so a quick look doesn't
+   need a click. Touch devices have no hover state and fall back to the tap
+   handler in AnnouncementBanner.jsx. */
+@media (hover: hover) {
+  .announcement.announcement-toggleable:hover .announcement-body {
+    max-height: 40em;
+  }
+}
+
+.announcement-manage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.announcement-manage-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.announcement-manage-row-dragging {
+  opacity: 0.5;
+}
+
+.announcement-manage-preview {
+  flex: 1;
+  min-width: 0;
+}
+
+.announcement-manage-edit {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.announcement-manage-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Library: arrange mode
+   ------------------------------------------------------------------------ */
+
+.library-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.library-card-arranging {
+  cursor: default;
+}
+
+.library-card-arranging:hover {
+  border-color: var(--border);
+}
+
+.library-card-dragging {
+  opacity: 0.5;
+}
+
+.library-card-arrange-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.library-profile-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  margin-left: auto;
+}
+
+.library-profile-toggle input:disabled {
+  cursor: not-allowed;
+}
+
+.library-profile-badge {
+  background: var(--accent);
+  color: #fff;
+}
+
+.library-checkbox-hint {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-top: -4px;
+}
+
+/* ---------------------------------------------------------------------------
+   Profile: sections, pinned works
+   ------------------------------------------------------------------------ */
+
+.profile-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 28px;
+  margin-bottom: 16px;
+}
+
+.profile-section-header h2 {
+  margin: 0;
+}
+
+/* A plain horizontal rule reads as a stronger break than the section
+   headers' own spacing alone — used once, between Works and Libraries. */
+.profile-section-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 32px 0 0;
+}
+
+/* Round icon-only trigger for a section's arrange/edit mode — same visual
+   language as .profile-edit-overlay-btn (the avatar/banner pencil), just
+   inline instead of overlaid on an image, so "arrange" reads as the same
+   kind of action as "edit" elsewhere on this page. */
+.corner-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 39px;
+  height: 39px;
+  border-radius: 50%;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.corner-icon-btn .material-symbols-outlined {
+  font-size: 21px;
+}
+
+.corner-icon-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.corner-icon-btn-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.corner-icon-btn-active:hover {
+  color: #fff;
+}
+
+.profile-works-arrange {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.profile-work-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.profile-work-tile-pinned {
+  border-color: var(--accent);
+}
+
+.profile-work-tile-dragging {
+  opacity: 0.5;
+}
+
+.profile-work-tile .drag-handle {
+  align-self: flex-start;
+}
+
+.profile-work-tile-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.profile-work-tile-controls .material-symbols-outlined {
+  font-size: 16px;
+}
+
+/* ---------------------------------------------------------------------------
+   Mobile tuning for everything above
+   ------------------------------------------------------------------------ */
+
+@media (max-width: 768px) {
+  .announcement {
+    padding: 12px 13px;
+    gap: 10px;
+  }
+
+  .announcement-icon {
+    font-size: 20px;
+  }
+
+  .announcement-title {
+    font-size: 14px;
+  }
+
+  .announcement-body {
+    font-size: 13px;
+  }
+
+  /* The preview/controls split stacks rather than sitting side by side —
+     at phone width the buttons would otherwise squeeze the preview to a
+     couple of characters wide. */
+  .announcement-manage-row {
+    flex-wrap: wrap;
+  }
+
+  .announcement-manage-preview {
+    flex-basis: 100%;
+    order: 1;
+  }
+
+  .announcement-manage-controls {
+    flex-basis: 100%;
+    order: 2;
+  }
+
+  .library-preview-item {
+    width: 88px;
+  }
+
+  .library-profile-toggle {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
+
+  .profile-works-arrange {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 12px;
+  }
+
+  .profile-work-tile-controls .btn-sm {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  /* Touch drag never starts on these (the browser treats the gesture as a
+     scroll), so the arrow buttons are the real reorder control on a phone —
+     give them a proper tap target instead of the desktop icon size. */
+  .library-card-arrange-bar .icon-btn,
+  .profile-work-tile-controls .icon-btn,
+  .library-manga-tile-controls .icon-btn,
+  .announcement-manage-controls .icon-btn {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  /* The corner icon triggers (Arrange, avatar/banner edit) are already a
+     reasonable 32px — bump to a real 44px tap target on touch without
+     changing how they look on desktop. */
+  .corner-icon-btn {
+    width: 40px;
+    height: 40px;
   }
 }

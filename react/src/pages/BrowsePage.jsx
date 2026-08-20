@@ -1,20 +1,39 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { useLanguage } from "../context/LanguageContext";
-import { renderInlineMarkdown, renderMarkdown } from "../utils/renderMarkdown";
+import { markdownToPlainText, renderInlineMarkdown, renderMarkdown } from "../utils/renderMarkdown";
 import MangaCard from "../components/MangaCard";
 import ShelfScroll from "../components/ShelfScroll";
+import AnnouncementBanner from "../components/AnnouncementBanner";
+
+// Every text a search can match on, lowercased once per manga. Titles (main
+// and alternative) are authored as markdown, so they're flattened to plain
+// text first — otherwise searching "kagura" would miss a title stored as
+// "**Kagura**bachi", and searching "**" would match everything.
+function searchableText(m) {
+  return [
+    markdownToPlainText(m.title),
+    ...(m.alternative_titles || []).map(markdownToPlainText),
+    ...(m.authors || []),
+    ...(m.artists || []),
+    ...(m.tags || []).map((tg) => tg.name),
+  ]
+    .join("\n")
+    .toLowerCase();
+}
 
 export default function BrowsePage() {
   const { t } = useLanguage();
   const [manga, setManga] = useState(null);
   const [categories, setCategories] = useState(null);
+  const [announcements, setAnnouncements] = useState([]);
   const [allMangaCardSize, setAllMangaCardSize] = useState("medium");
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     api.get("/manga").then(setManga).catch(() => setManga([]));
     api.get("/categories").then(setCategories).catch(() => setCategories([]));
+    api.get("/announcements").then(setAnnouncements).catch(() => setAnnouncements([]));
     api.get("/settings").then((s) => setAllMangaCardSize(s.all_manga_card_size)).catch(() => {});
   }, []);
 
@@ -23,16 +42,18 @@ export default function BrowsePage() {
   const shelves = categories.filter((c) => c.manga.length > 0);
   const trimmedQuery = searchQuery.trim().toLowerCase();
   const isSearching = trimmedQuery.length > 0;
-  const searchResults = isSearching
-    ? manga.filter(
-        (m) =>
-          m.title.toLowerCase().includes(trimmedQuery) ||
-          (m.tags || []).some((tg) => tg.name.toLowerCase().includes(trimmedQuery))
-      )
-    : [];
+  const searchResults = isSearching ? manga.filter((m) => searchableText(m).includes(trimmedQuery)) : [];
 
   return (
     <div className="page browse-page">
+      {announcements.length > 0 && (
+        <div className="announcement-list">
+          {announcements.map((a) => (
+            <AnnouncementBanner key={a.id} announcement={a} />
+          ))}
+        </div>
+      )}
+
       <div className="browse-search">
         <input
           type="search"

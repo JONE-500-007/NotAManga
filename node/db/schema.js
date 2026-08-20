@@ -357,6 +357,59 @@ async function initSchema(pool) {
     ALTER TABLE manga_links ALTER COLUMN site_id SET NOT NULL;
     ALTER TABLE manga_links DROP COLUMN IF EXISTS site_key;
     ALTER TABLE manga_links DROP COLUMN IF EXISTS custom_label;
+
+    -- Lists used to be shown newest-first with no way to arrange them; this
+    -- lets an owner drag them into a deliberate order on /library. Backfilled
+    -- from the old created_at DESC order below so existing libraries keep
+    -- looking exactly as they did before this column existed.
+    ALTER TABLE manga_lists ADD COLUMN IF NOT EXISTS position INTEGER;
+    UPDATE manga_lists ml SET position = ranked.rn
+      FROM (
+        SELECT id, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC, id DESC) AS rn
+        FROM manga_lists
+      ) ranked
+     WHERE ml.id = ranked.id AND ml.position IS NULL;
+    ALTER TABLE manga_lists DROP CONSTRAINT IF EXISTS manga_lists_user_position_key;
+    ALTER TABLE manga_lists ADD CONSTRAINT manga_lists_user_position_key UNIQUE (user_id, position);
+
+    -- Opt-in per list: a public list only appears on its owner's profile
+    -- page if they picked it here. Private lists are excluded regardless —
+    -- see the query in users.routes.js.
+    ALTER TABLE manga_lists ADD COLUMN IF NOT EXISTS show_on_profile BOOLEAN NOT NULL DEFAULT false;
+
+    -- Same nullable-position idea as manga.pinned_position (the admin's
+    -- "All Manga" pins), but scoped to the uploader's own profile: a manga
+    -- an uploader pins floats to the front of the Works grid on their
+    -- profile. Uniqueness is per uploader, so two people pinning at
+    -- position 1 don't collide.
+    ALTER TABLE manga ADD COLUMN IF NOT EXISTS profile_pin_position INTEGER;
+    ALTER TABLE manga DROP CONSTRAINT IF EXISTS manga_uploader_profile_pin_key;
+    ALTER TABLE manga ADD CONSTRAINT manga_uploader_profile_pin_key UNIQUE (uploader_id, profile_pin_position);
+
+    -- Admin-authored notices shown above the search box on the browse page.
+    -- Ordered by position (drag-to-reorder in the admin UI) rather than
+    -- creation date, so the most important notice can be put on top.
+    CREATE TABLE IF NOT EXISTS announcements (
+      id SERIAL PRIMARY KEY,
+      title TEXT NOT NULL,
+      body TEXT,
+      position INTEGER NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    -- Manga within one list are drag-orderable too, not just the lists
+    -- themselves. Backfilled to match the old added_at DESC (newest-first)
+    -- order, so existing libraries don't visibly reshuffle the moment this
+    -- column appears.
+    ALTER TABLE manga_list_items ADD COLUMN IF NOT EXISTS position INTEGER;
+    UPDATE manga_list_items mli SET position = ranked.rn
+      FROM (
+        SELECT list_id, manga_id, ROW_NUMBER() OVER (PARTITION BY list_id ORDER BY added_at DESC) AS rn
+        FROM manga_list_items
+      ) ranked
+     WHERE mli.list_id = ranked.list_id AND mli.manga_id = ranked.manga_id AND mli.position IS NULL;
+    ALTER TABLE manga_list_items DROP CONSTRAINT IF EXISTS manga_list_items_list_position_key;
+    ALTER TABLE manga_list_items ADD CONSTRAINT manga_list_items_list_position_key UNIQUE (list_id, position);
   `);
 }
 

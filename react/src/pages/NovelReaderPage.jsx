@@ -20,6 +20,9 @@ export default function NovelReaderPage() {
   const [mangaTitle, setMangaTitle] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [chromeVisible, setChromeVisible] = useState(true);
+  // See ReaderPage: the hide timer must not run while the chapter dropdown
+  // is open, or the list vanishes mid-choice.
+  const [chapterSelectOpen, setChapterSelectOpen] = useState(false);
   const hideTimerRef = useRef(null);
 
   useEffect(() => {
@@ -44,7 +47,10 @@ export default function NovelReaderPage() {
 
   // Auto-hide the topbar while reading, same as the manga reader — reveal
   // it again on any scroll/mouse/touch activity, then hide it after a
-  // pause. Stays visible whenever the settings panel is open.
+  // pause. Stays visible while the settings panel or chapter dropdown is
+  // open.
+  const chromeLocked = showSettings || chapterSelectOpen;
+
   const scheduleHide = useCallback(() => {
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     hideTimerRef.current = setTimeout(() => setChromeVisible(false), HIDE_DELAY_MS);
@@ -52,17 +58,17 @@ export default function NovelReaderPage() {
 
   const showChrome = useCallback(() => {
     setChromeVisible(true);
-    if (!showSettings) scheduleHide();
-  }, [showSettings, scheduleHide]);
+    if (!chromeLocked) scheduleHide();
+  }, [chromeLocked, scheduleHide]);
 
   useEffect(() => {
-    if (showSettings) {
+    if (chromeLocked) {
       setChromeVisible(true);
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
       return;
     }
     scheduleHide();
-  }, [showSettings, scheduleHide]);
+  }, [chromeLocked, scheduleHide]);
 
   useEffect(() => {
     window.addEventListener("mousemove", showChrome);
@@ -109,7 +115,12 @@ export default function NovelReaderPage() {
           <select
             className="reader-chapter-select"
             value={chapterId}
-            onChange={(e) => navigate(`/manga/${mangaId}/chapter/${e.target.value}`)}
+            onChange={(e) => {
+              setChapterSelectOpen(false);
+              navigate(`/manga/${mangaId}/chapter/${e.target.value}`);
+            }}
+            onFocus={() => setChapterSelectOpen(true)}
+            onBlur={() => setChapterSelectOpen(false)}
             aria-label={t("reader.selectChapter")}
           >
             {hasVolumes

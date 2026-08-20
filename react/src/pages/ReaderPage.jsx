@@ -29,6 +29,11 @@ export default function ReaderPage() {
   const [visibleGroupIndex, setVisibleGroupIndex] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [chromeVisible, setChromeVisible] = useState(true);
+  // The chapter <select> lives inside the auto-hiding chrome, so letting the
+  // hide timer run while its dropdown is open would yank the list away
+  // mid-choice (and on mobile, where picking a chapter means scrolling a
+  // native picker, that's the common case rather than an edge case).
+  const [chapterSelectOpen, setChapterSelectOpen] = useState(false);
 
   const groupRefs = useRef([]);
   const hideTimerRef = useRef(null);
@@ -145,7 +150,11 @@ export default function ReaderPage() {
     return () => observer.disconnect();
   }, [settings.mode, chapter, groups.length]);
 
-  // Auto-hide chrome (topbar + progress bar) while reading.
+  // Auto-hide chrome (topbar + progress bar) while reading — unless
+  // something inside it is mid-interaction, which would otherwise disappear
+  // out from under the reader.
+  const chromeLocked = showSettings || chapterSelectOpen;
+
   const scheduleHide = useCallback(() => {
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     hideTimerRef.current = setTimeout(() => setChromeVisible(false), HIDE_DELAY_MS);
@@ -153,17 +162,17 @@ export default function ReaderPage() {
 
   const showChrome = useCallback(() => {
     setChromeVisible(true);
-    if (!showSettings) scheduleHide();
-  }, [showSettings, scheduleHide]);
+    if (!chromeLocked) scheduleHide();
+  }, [chromeLocked, scheduleHide]);
 
   useEffect(() => {
-    if (showSettings) {
+    if (chromeLocked) {
       setChromeVisible(true);
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
       return;
     }
     scheduleHide();
-  }, [showSettings, scheduleHide]);
+  }, [chromeLocked, scheduleHide]);
 
   useEffect(() => {
     window.addEventListener("mousemove", showChrome);
@@ -277,7 +286,15 @@ export default function ReaderPage() {
           <select
             className="reader-chapter-select"
             value={chapterId}
-            onChange={(e) => navigate(`/manga/${mangaId}/chapter/${e.target.value}`)}
+            onChange={(e) => {
+              setChapterSelectOpen(false);
+              navigate(`/manga/${mangaId}/chapter/${e.target.value}`);
+            }}
+            // focus/blur rather than a click toggle: it covers the keyboard
+            // path too, and blur fires whenever the native dropdown closes
+            // (pick, Escape, or a tap outside), so the timer always resumes.
+            onFocus={() => setChapterSelectOpen(true)}
+            onBlur={() => setChapterSelectOpen(false)}
             aria-label={t("reader.selectChapter")}
           >
             {hasVolumes
