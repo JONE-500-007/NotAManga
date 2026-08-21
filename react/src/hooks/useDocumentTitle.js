@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-const SITE_NAME = "NotAManga";
+const SITE_NAME = "JustSomeManga";
 
 // Google (and every other search engine) reads the raw <title>/meta tags a
 // page ships, not just what's visually on screen — a SPA that never touches

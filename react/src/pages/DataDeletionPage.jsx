@@ -12,7 +12,7 @@ const CONTENT = {
   th: {
     title: "การลบบัญชีและข้อมูล",
     intro:
-      "ถ้าคุณต้องการลบบัญชี NotAManga และข้อมูลทั้งหมดที่เกี่ยวข้อง ไม่ว่าจะสมัครด้วยชื่อผู้ใช้/รหัสผ่าน หรือเข้าสู่ระบบผ่าน Google/Facebook ก็ตาม ทำตามขั้นตอนนี้ได้เลย",
+      "ถ้าคุณต้องการลบบัญชี JustSomeManga และข้อมูลทั้งหมดที่เกี่ยวข้อง ไม่ว่าจะสมัครด้วยชื่อผู้ใช้/รหัสผ่าน หรือเข้าสู่ระบบผ่าน Google/Facebook ก็ตาม ทำตามขั้นตอนนี้ได้เลย",
     steps: [
       `ส่งอีเมลมาที่ ${CONTACT_EMAIL} จากอีเมลที่ผูกกับบัญชีของคุณ (หรือแจ้งชื่อผู้ใช้ในเนื้อหาอีเมลถ้าไม่มีอีเมลผูกไว้)`,
       "ระบุหัวข้ออีเมลว่า \"ขอลบบัญชี\" พร้อมชื่อผู้ใช้ของคุณ",
@@ -37,7 +37,7 @@ const CONTENT = {
   en: {
     title: "Account & Data Deletion",
     intro:
-      "If you'd like to delete your NotAManga account and the data tied to it — whether you signed up with a username/password or through Google/Facebook — here's how.",
+      "If you'd like to delete your JustSomeManga account and the data tied to it — whether you signed up with a username/password or through Google/Facebook — here's how.",
     steps: [
       `Email ${CONTACT_EMAIL} from the address on your account (or mention your username in the email if none is set).`,
       'Use the subject line "Account deletion request" and include your username.',
