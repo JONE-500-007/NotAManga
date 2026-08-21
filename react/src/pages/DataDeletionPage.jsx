@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
-const CONTACT_EMAIL = "hello@notamanga.dpdns.org";
+const CONTACT_EMAIL = "hello@justsomemanga.com";
 
 // Facebook's Data Deletion requirement accepts a plain instructions page
 // (rather than an automated callback endpoint) as long as it's clear about

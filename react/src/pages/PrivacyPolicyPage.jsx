@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
-const CONTACT_EMAIL = "hello@notamanga.dpdns.org";
+const CONTACT_EMAIL = "hello@justsomemanga.com";
 
 // Plain content rather than the usual per-string i18n keys — this is one
 // self-contained legal document, not UI copy reused across components, so a

@@ -11,4 +11,4 @@ Disallow: /upload
 Disallow: /admin
 Disallow: /api/
 
-Sitemap: https://notamanga.dpdns.org/sitemap.xml
+Sitemap: https://justsomemanga.com/sitemap.xml

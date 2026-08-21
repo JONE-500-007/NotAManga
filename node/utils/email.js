@@ -2,7 +2,7 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY;
 // Not "noreply@" — Gmail's spam heuristics penalize no-reply senders (see
 // Resend's own delivery Insights panel), and it's a needlessly hostile UX
 // for an address people may legitimately want to reply to.
-const EMAIL_FROM = process.env.EMAIL_FROM || "NotAManga <hello@notamanga.dpdns.org>";
+const EMAIL_FROM = process.env.EMAIL_FROM || "NotAManga <hello@justsomemanga.com>";
 
 async function sendEmail({ to, subject, html }) {
   if (!RESEND_API_KEY) {
