@@ -3719,6 +3719,15 @@ textarea.markdown-field:focus,
   margin: 16px 0 24px;
 }
 
+/* .manga-description zeroes its own last child's margin (see the rule
+   above), and a visitor with no owner actions to show goes straight from
+   description to grid with nothing between them to create a gap. Margins
+   collapse to whichever's larger, not stack, so this doesn't also widen the
+   gap when .library-detail-actions *is* present. */
+.library-detail-page .manga-description {
+  margin-bottom: 20px;
+}
+
 .library-edit-form {
   margin-bottom: 24px;
 }

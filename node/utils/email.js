@@ -2,7 +2,7 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY;
 // Not "noreply@" — Gmail's spam heuristics penalize no-reply senders (see
 // Resend's own delivery Insights panel), and it's a needlessly hostile UX
 // for an address people may legitimately want to reply to.
-const EMAIL_FROM = process.env.EMAIL_FROM || "NotAManga <hello@notamanga.dpdns.org>";
+const EMAIL_FROM = process.env.EMAIL_FROM || "JustSomeManga <hello@justsomemanga.com>";
 
 async function sendEmail({ to, subject, html }) {
   if (!RESEND_API_KEY) {
@@ -31,7 +31,7 @@ function emailShell(title, bodyHtml) {
       <div style="max-width: 480px; margin: 0 auto; background: #1c1d24; border: 1px solid #2c2d38; border-radius: 12px; padding: 32px;">
         <h1 style="color: #f5f5f7; font-size: 20px; margin: 0 0 16px;">${title}</h1>
         ${bodyHtml}
-        <p style="color: #8b8c99; font-size: 12px; margin-top: 32px;">NotAManga</p>
+        <p style="color: #8b8c99; font-size: 12px; margin-top: 32px;">JustSomeManga</p>
       </div>
     </div>
   `;
@@ -44,10 +44,10 @@ function buttonHtml(url, label) {
 async function sendVerificationEmail(to, url) {
   await sendEmail({
     to,
-    subject: "Verify your NotAManga email address",
+    subject: "Verify your JustSomeManga email address",
     html: emailShell(
       "Verify your email",
-      `<p>Confirm this is your email address to finish setting up your NotAManga account.</p>
+      `<p>Confirm this is your email address to finish setting up your JustSomeManga account.</p>
        ${buttonHtml(url, "Verify email")}
        <p style="font-size:13px;color:#8b8c99;">This link expires in 1 hour. If you didn't create an account, you can ignore this email.</p>`
     ),
@@ -57,7 +57,7 @@ async function sendVerificationEmail(to, url) {
 async function sendPasswordResetEmail(to, url) {
   await sendEmail({
     to,
-    subject: "Reset your NotAManga password",
+    subject: "Reset your JustSomeManga password",
     html: emailShell(
       "Reset your password",
       `<p>Someone requested a password reset for this account. Click below to choose a new password.</p>

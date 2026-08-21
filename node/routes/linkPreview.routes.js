@@ -12,7 +12,7 @@ const { PUBLIC_USER_COLUMNS } = require("../utils/userColumns");
 const router = express.Router();
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
-const SITE_NAME = "NotAManga";
+const SITE_NAME = "JustSomeManga";
 const DEFAULT_DESCRIPTION = "ช่วยด้วยวดวด ผมหายใจไม่อ ใครก็ได้ไไดด้ด้้ ผมติดอยู่ในนี้ ช่วยด้ววววย H2O=น้ำ";
 // Same file react/index.html points <link rel="icon"> at — Discord (and a
 // few others) read this tag to show a small site icon alongside the embed.

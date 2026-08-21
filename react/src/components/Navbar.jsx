@@ -31,7 +31,7 @@ export default function Navbar() {
   return (
     <header className="navbar">
       <Link to="/" className="navbar-brand">
-        NotAManga
+        JustSomeManga
       </Link>
 
       <nav className="navbar-links">

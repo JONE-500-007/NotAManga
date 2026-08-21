@@ -22,7 +22,7 @@ services:
       FACEBOOK_REDIRECT_URI: "http://localhost:5173/api/auth/facebook/callback"
       FRONTEND_URL: "http://localhost:5173"
       RESEND_API_KEY: "${RESEND_API_KEY}"
-      EMAIL_FROM: "NotAManga <hello@notamanga.dpdns.org>"
+      EMAIL_FROM: "JustSomeManga <hello@justsomemanga.com>"
       R2_ACCOUNT_ID: "${R2_ACCOUNT_ID}"
       R2_ENDPOINT: "${R2_ENDPOINT}"
       R2_BUCKET_NAME: "${R2_BUCKET_NAME}"
