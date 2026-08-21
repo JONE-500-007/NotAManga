@@ -21,10 +21,12 @@ export default function VerifyEmailPage() {
     api
       .post("/auth/verify-email", { token })
       .then(async () => {
-        // If this browser also happens to be logged in as the account that
-        // just got verified, refresh its state so the profile page's
-        // "unverified" banner disappears immediately.
-        if (user) await refreshUser();
+        // Always try to refresh — not just when `user` is already truthy.
+        // AuthProvider's own /auth/me fetch races this effect on first
+        // load, so `user` can still be null here even when this browser
+        // does hold a valid session for the account just verified.
+        // refreshUser() no-ops safely if there's genuinely no session.
+        await refreshUser();
         setStatus("success");
       })
       .catch((err) => {

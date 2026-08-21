@@ -88,8 +88,12 @@ export default function EditChapterPage() {
 
   const handleDeletePage = async (pageId) => {
     if (!window.confirm(t("editChapter.deletePage") + "?")) return;
-    await api.del(`/manga/${mangaId}/chapters/${chapterId}/pages/${pageId}`);
-    setPages((current) => current.filter((p) => p.id !== pageId));
+    try {
+      await api.del(`/manga/${mangaId}/chapters/${chapterId}/pages/${pageId}`);
+      setPages((current) => current.filter((p) => p.id !== pageId));
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const handleSelectNewPages = (e) => {

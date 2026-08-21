@@ -324,6 +324,9 @@ export default {
   "common.on": "เปิด",
   "common.off": "ปิด",
   "common.uploading": "กำลังอัปโหลด",
+  "common.uploadingHint": "ส่งไฟล์จากเครื่องคุณไปยังเซิร์ฟเวอร์",
+  "common.savingToStorage": "กำลังบันทึกเข้าระบบจัดเก็บไฟล์",
+  "common.savingToStorageHint": "เซิร์ฟเวอร์กำลังย้ายไฟล์ไปเก็บถาวร ขั้นตอนนี้อาจใช้เวลาสักครู่ กรุณาอย่าปิดหน้านี้",
   "common.showPassword": "แสดงรหัสผ่าน",
   "common.hidePassword": "ซ่อนรหัสผ่าน",
 

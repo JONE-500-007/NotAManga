@@ -324,6 +324,9 @@ export default {
   "common.on": "On",
   "common.off": "Off",
   "common.uploading": "Uploading",
+  "common.uploadingHint": "Sending files from your device to the server",
+  "common.savingToStorage": "Saving to storage",
+  "common.savingToStorageHint": "The server is moving your files to permanent storage. This can take a moment — please don't close this page.",
   "common.showPassword": "Show password",
   "common.hidePassword": "Hide password",
 
