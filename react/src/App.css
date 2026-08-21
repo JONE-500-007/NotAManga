@@ -2861,6 +2861,14 @@ textarea.markdown-field:focus,
   margin-top: 0;
 }
 
+.admin-announcements-page .category-description {
+  margin-bottom: 24px;
+}
+
+.admin-announcements-page .reorder-hint {
+  margin-top: 24px;
+}
+
 .category-list {
   display: flex;
   flex-direction: column;
@@ -4577,7 +4585,7 @@ a.dashboard-rank-row:hover {
   gap: 12px;
   list-style: none;
   padding: 0;
-  margin: 0;
+  margin: 24px 0 0;
 }
 
 .announcement-manage-row {
