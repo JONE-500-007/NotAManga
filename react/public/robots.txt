@@ -11,4 +11,4 @@ Disallow: /upload
 Disallow: /admin
 Disallow: /api/
 
-Sitemap: https://justsomemanga.com/sitemap.xml
+Sitemap: https://www.justsomemanga.com/sitemap.xml
