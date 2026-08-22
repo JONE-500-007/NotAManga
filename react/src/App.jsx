@@ -21,6 +21,7 @@ import UploadNovelPage from "./pages/UploadNovelPage";
 import UploadChapterRouter from "./pages/UploadChapterRouter";
 import EditMangaPage from "./pages/EditMangaPage";
 import EditChapterRouter from "./pages/EditChapterRouter";
+import AdminHubPage from "./pages/AdminHubPage";
 import AdminCategoriesPage from "./pages/AdminCategoriesPage";
 import AdminTagsPage from "./pages/AdminTagsPage";
 import AdminLinkSitesPage from "./pages/AdminLinkSitesPage";
@@ -102,6 +103,7 @@ function App() {
               </Route>
 
               <Route element={<AdminRoute />}>
+                <Route path="/admin" element={<AdminHubPage />} />
                 <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
                 <Route path="/admin/dashboard/manga/:mangaId" element={<AdminMangaStatsPage />} />
                 <Route path="/admin/categories" element={<AdminCategoriesPage />} />

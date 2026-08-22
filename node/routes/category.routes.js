@@ -74,7 +74,7 @@ router.patch("/categories/:categoryId", requireAuth, requireRole("admin"), async
   }
 
   const result = await pool.query(
-    "UPDATE categories SET title = $1, description = $2, card_size = COALESCE($3, card_size) WHERE id = $4 RETURNING *",
+    "UPDATE categories SET title = $1, description = $2, card_size = COALESCE($3, card_size), updated_at = NOW() WHERE id = $4 RETURNING *",
     [title, description || null, card_size || null, categoryId]
   );
   if (result.rows.length === 0) return res.status(404).json({ error: "Category not found" });

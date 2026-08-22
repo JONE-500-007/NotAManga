@@ -78,7 +78,7 @@ export default function AddToLibraryButton({ mangaId }) {
             <p className="manga-library-status">{t("common.loading")}</p>
           ) : lists && lists.length > 0 ? (
             lists.map((list) => (
-              <label key={list.id} className="manga-library-item">
+              <label key={list.id} className="check-control check-control-sm manga-library-item">
                 <input type="checkbox" checked={list.has_manga} onChange={() => toggleMembership(list)} />
                 <span dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(list.title) }} />
               </label>

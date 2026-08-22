@@ -145,7 +145,7 @@ export default function MyLibraryPage() {
           <MarkdownEditor value={newDescription} onChange={setNewDescription} />
         </label>
 
-        <label className="library-private-checkbox">
+        <label className="check-control library-private-checkbox">
           <input type="checkbox" checked={newPrivate} onChange={(e) => setNewPrivate(e.target.checked)} />
           {t("library.private")}
         </label>
@@ -205,7 +205,10 @@ export default function MyLibraryPage() {
                   </button>
                   {/* A private list is never shown publicly, so the toggle is
                       disabled rather than silently ignored server-side. */}
-                  <label className="library-profile-toggle" title={t("library.showOnProfileHint")}>
+                  <label
+                    className="check-control check-control-sm library-profile-toggle"
+                    title={t("library.showOnProfileHint")}
+                  >
                     <input
                       type="checkbox"
                       checked={list.show_on_profile && !list.is_private}

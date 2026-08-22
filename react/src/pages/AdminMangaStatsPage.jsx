@@ -76,6 +76,24 @@ export default function AdminMangaStatsPage() {
       )
     : data.chapters;
 
+  // Chapters come back ordered by chapter_number, so walking them in order
+  // groups each volume's chapters together and keeps the volumes themselves
+  // in reading order. Chapters with no volume set collect under a null key,
+  // rendered last as "No Volume" rather than being dropped.
+  const volumeGroups = [];
+  for (const chapter of data.chapters) {
+    const key = chapter.volume ?? null;
+    const existing = volumeGroups.find((g) => g.volume === key);
+    if (existing) existing.chapters.push(chapter);
+    else volumeGroups.push({ volume: key, chapters: [chapter] });
+  }
+  volumeGroups.sort((a, b) => {
+    if (a.volume === null) return 1;
+    if (b.volume === null) return -1;
+    return Number(a.volume) - Number(b.volume);
+  });
+  const numberedVolumeCount = volumeGroups.filter((g) => g.volume !== null).length;
+
   const chartSeries = [
     { key: "primary", label: data.title.replace(/<[^>]+>/g, ""), color: "var(--accent)", data: trend || [] },
   ];
@@ -105,7 +123,40 @@ export default function AdminMangaStatsPage() {
           formatted={data.rating_count > 0 ? data.rating_average.toFixed(1) : "—"}
         />
         <StatCard label={t("admin.dashboard.totalChapters")} value={data.chapters.length} />
+        <StatCard label={t("admin.dashboard.totalVolumes")} value={numberedVolumeCount} />
       </div>
+
+      {volumeGroups.length > 0 && (
+        <section className="dashboard-section admin-volume-section">
+          <h2>{t("admin.dashboard.volumeBreakdown")}</h2>
+          <ul className="admin-volume-list">
+            {volumeGroups.map((group) => {
+              const first = group.chapters[0];
+              const last = group.chapters[group.chapters.length - 1];
+              const views = group.chapters.reduce((sum, c) => sum + c.view_count, 0);
+              return (
+                <li key={group.volume ?? "none"} className="admin-volume-item">
+                  <span className="admin-volume-name">
+                    {group.volume === null
+                      ? t("admin.dashboard.noVolume")
+                      : `${t("detail.volume")} ${group.volume}`}
+                  </span>
+                  <span className="admin-volume-meta">
+                    {group.chapters.length} {t("detail.chapters")} · Ch. {first.chapter_number}
+                    {first.id !== last.id ? `–${last.chapter_number}` : ""}
+                  </span>
+                  <span className="admin-volume-views">
+                    <span className="material-symbols-outlined" aria-hidden="true">
+                      visibility
+                    </span>
+                    {views.toLocaleString()}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       <section className="dashboard-section dashboard-trend-section">
         <div className="dashboard-trend-header">
@@ -164,6 +215,7 @@ export default function AdminMangaStatsPage() {
               <thead>
                 <tr>
                   <th>{t("detail.chapters")}</th>
+                  <th>{t("detail.volume")}</th>
                   <th>{t("admin.dashboard.uploaded")}</th>
                   <th>{t("detail.views")}</th>
                 </tr>
@@ -178,6 +230,7 @@ export default function AdminMangaStatsPage() {
                       Ch. {c.chapter_number}
                       {c.title ? ` — ${c.title}` : ""}
                     </td>
+                    <td>{c.volume != null ? c.volume : "—"}</td>
                     <td>{new Date(c.created_at).toLocaleString()}</td>
                     <td>{c.view_count.toLocaleString()}</td>
                   </tr>

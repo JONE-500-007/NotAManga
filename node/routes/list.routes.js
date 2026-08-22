@@ -151,7 +151,7 @@ router.patch("/lists/:listId", requireAuth, async (req, res) => {
   const isPrivate = !!is_private;
   const result = await pool.query(
     `UPDATE manga_lists SET title = $1, description = $2, is_private = $3,
-            show_on_profile = COALESCE($4, show_on_profile) AND NOT $3
+            show_on_profile = COALESCE($4, show_on_profile) AND NOT $3, updated_at = NOW()
       WHERE id = $5 AND user_id = $6 RETURNING *`,
     [title.trim(), description || null, isPrivate, show_on_profile ?? null, listId, req.user.id]
   );

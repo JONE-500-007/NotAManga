@@ -65,7 +65,7 @@ router.patch("/announcements/:announcementId", requireAuth, requireRole("admin")
   assertMaxLength(body, { label: "Body", max: MAX_DESCRIPTION_LENGTH });
 
   const result = await pool.query(
-    "UPDATE announcements SET title = $1, body = $2 WHERE id = $3 RETURNING id, title, body, position",
+    "UPDATE announcements SET title = $1, body = $2, updated_at = NOW() WHERE id = $3 RETURNING id, title, body, position",
     [title.trim(), body || null, announcementId]
   );
   if (result.rows.length === 0) return res.status(404).json({ error: "Announcement not found" });

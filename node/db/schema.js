@@ -410,6 +410,82 @@ async function initSchema(pool) {
      WHERE mli.list_id = ranked.list_id AND mli.manga_id = ranked.manga_id AND mli.position IS NULL;
     ALTER TABLE manga_list_items DROP CONSTRAINT IF EXISTS manga_list_items_list_position_key;
     ALTER TABLE manga_list_items ADD CONSTRAINT manga_list_items_list_position_key UNIQUE (list_id, position);
+
+    -- ---------------------------------------------------------------------
+    -- Provenance timestamps
+    --
+    -- Most tables already carried a created_at; these are the ones that
+    -- didn't, so "when did this actually happen?" was unanswerable for them.
+    -- Nothing reads these yet — they're recorded now so the history exists
+    -- when something does, since a timestamp can't be backfilled after the
+    -- fact. Rows that predate this migration all get its run time, which is
+    -- wrong but bounded (no row is dated later than it really happened), and
+    -- is the only honest option available.
+    -- ---------------------------------------------------------------------
+
+    -- Per-page upload time. A chapter's own created_at only says when the
+    -- chapter was made; pages added later (see the "Add pages" flow in
+    -- EditChapterPage) are invisible without this.
+    ALTER TABLE pages ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+    -- Same idea for a novel chapter's blocks.
+    ALTER TABLE novel_blocks ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+    -- When an admin filed this manga under this category / when an uploader
+    -- attached this tag — distinct from either row's own creation date.
+    ALTER TABLE category_manga ADD COLUMN IF NOT EXISTS added_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+    ALTER TABLE manga_tags ADD COLUMN IF NOT EXISTS added_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+    ALTER TABLE manga_visible_roles ADD COLUMN IF NOT EXISTS added_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+    -- The per-manga metadata rows an uploader edits over a work's lifetime.
+    -- CAVEAT: replaceMangaSideTables() in routes/manga.routes.js deletes and
+    -- re-inserts all three of these on every manga edit (the edit form
+    -- resubmits its full lists rather than diffing), so this reads as "when
+    -- this row was last written", NOT "when this credit/title/link was first
+    -- added". Treat it that way until that function diffs instead.
+    ALTER TABLE manga_links ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+    ALTER TABLE manga_alternative_titles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+    ALTER TABLE manga_credits ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+    -- "Last touched" alongside the existing created_at ("first made"). Kept
+    -- current by the UPDATE statements in the routes rather than a trigger,
+    -- so it's obvious at the call site which edits count as a change.
+    ALTER TABLE manga ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+    ALTER TABLE chapters ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+    ALTER TABLE manga_lists ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+    ALTER TABLE announcements ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+    ALTER TABLE categories ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+    -- A rating can be changed after the fact; created_at alone would then
+    -- describe a score the row no longer holds.
+    ALTER TABLE manga_ratings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+    -- Append-only log of profile field changes. The users row only ever
+    -- holds the current value, so without this "when did they change their
+    -- name, and from what?" has no answer at all.
+    --
+    -- "field" is whatever the caller passes (see utils/profileEvents.js) —
+    -- deliberately not a CHECK-constrained enum, so instrumenting another
+    -- column later doesn't need a migration. What's actually written today:
+    -- display_name, bio, email, avatar_path, banner_path. Role and username
+    -- aren't logged because nothing can currently change them.
+    --
+    -- changed_by is the user themselves today; it exists so an admin editing
+    -- someone else's account stays distinguishable if such a route is added.
+    -- The image fields store the storage path, not the image — an old path
+    -- may point at an object since deleted from R2, which is expected.
+    CREATE TABLE IF NOT EXISTS user_profile_events (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      field TEXT NOT NULL,
+      old_value TEXT,
+      new_value TEXT,
+      changed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS user_profile_events_user_idx
+      ON user_profile_events (user_id, changed_at DESC);
   `);
 }
 

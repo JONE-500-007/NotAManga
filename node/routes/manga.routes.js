@@ -366,7 +366,7 @@ router.patch("/manga/:mangaId/rating", requireAuth, async (req, res) => {
 
   await pool.query(
     `INSERT INTO manga_ratings (manga_id, user_id, rating) VALUES ($1, $2, $3)
-     ON CONFLICT (manga_id, user_id) DO UPDATE SET rating = EXCLUDED.rating`,
+     ON CONFLICT (manga_id, user_id) DO UPDATE SET rating = EXCLUDED.rating, updated_at = NOW()`,
     [mangaId, req.user.id, rating]
   );
 
@@ -418,10 +418,10 @@ router.patch(
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      const result = await client.query("UPDATE manga SET is_private = $1 WHERE id = $2 RETURNING *", [
-        is_private,
-        mangaId,
-      ]);
+      const result = await client.query(
+        "UPDATE manga SET is_private = $1, updated_at = NOW() WHERE id = $2 RETURNING *",
+        [is_private, mangaId]
+      );
       await client.query("DELETE FROM manga_visible_roles WHERE manga_id = $1", [mangaId]);
       if (is_private && roles.length > 0) {
         for (const role of roles) {
@@ -446,8 +446,8 @@ router.patch("/manga/:mangaId/admin-lock", requireAuth, requireRole("admin"), as
 
   const result = await pool.query(
     locked
-      ? "UPDATE manga SET privacy_locked_by_admin = true, is_private = true WHERE id = $1 RETURNING *"
-      : "UPDATE manga SET privacy_locked_by_admin = false WHERE id = $1 RETURNING *",
+      ? "UPDATE manga SET privacy_locked_by_admin = true, is_private = true, updated_at = NOW() WHERE id = $1 RETURNING *"
+      : "UPDATE manga SET privacy_locked_by_admin = false, updated_at = NOW() WHERE id = $1 RETURNING *",
     [mangaId]
   );
   if (result.rows.length === 0) return res.status(404).json({ error: "Manga not found" });
@@ -613,7 +613,8 @@ router.patch(
       await client.query("BEGIN");
       const result = await client.query(
         `UPDATE manga
-         SET title = $1, description = $2, format = $3, cover_path = COALESCE($4, cover_path), status = $5
+         SET title = $1, description = $2, format = $3, cover_path = COALESCE($4, cover_path), status = $5,
+             updated_at = NOW()
          WHERE id = $6 RETURNING *`,
         [title, description || null, format, coverPath || null, status, mangaId]
       );
@@ -797,7 +798,7 @@ router.patch(
       await client.query("BEGIN");
 
       const chapterResult = await client.query(
-        "UPDATE chapters SET chapter_number = $1, title = $2, volume = $3 WHERE id = $4 AND manga_id = $5 RETURNING *",
+        "UPDATE chapters SET chapter_number = $1, title = $2, volume = $3, updated_at = NOW() WHERE id = $4 AND manga_id = $5 RETURNING *",
         [chapter_number, title || null, volume || null, chapterId, mangaId]
       );
       if (chapterResult.rows.length === 0) {
@@ -872,7 +873,7 @@ router.patch(
     try {
       await client.query("BEGIN");
       const result = await client.query(
-        "UPDATE chapters SET chapter_number = $1, title = $2, volume = $3 WHERE id = $4 AND manga_id = $5 RETURNING *",
+        "UPDATE chapters SET chapter_number = $1, title = $2, volume = $3, updated_at = NOW() WHERE id = $4 AND manga_id = $5 RETURNING *",
         [chapter_number, title || null, volume || null, chapterId, mangaId]
       );
       if (result.rows.length === 0) {

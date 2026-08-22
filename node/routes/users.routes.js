@@ -8,6 +8,7 @@ const { SAFE_USER_COLUMNS, PUBLIC_USER_COLUMNS } = require("../utils/userColumns
 const { visibilityFilter } = require("../utils/mangaVisibility");
 const { reorderRows } = require("../utils/reorder");
 const { assertMaxLength, MAX_DISPLAY_NAME_LENGTH, MAX_BIO_LENGTH } = require("../utils/validation");
+const { recordProfileChanges } = require("../utils/profileEvents");
 
 const router = express.Router();
 
@@ -122,7 +123,10 @@ router.patch("/users/me", requireAuth, async (req, res) => {
   assertMaxLength(display_name, { label: "Display name", max: MAX_DISPLAY_NAME_LENGTH });
   assertMaxLength(bio, { label: "Bio", max: MAX_BIO_LENGTH });
 
-  const current = await pool.query("SELECT auth_provider, email FROM users WHERE id = $1", [req.user.id]);
+  const current = await pool.query(
+    "SELECT auth_provider, email, display_name, bio FROM users WHERE id = $1",
+    [req.user.id]
+  );
   const existing = current.rows[0];
   if (!existing) return res.status(404).json({ error: "User not found" });
 
@@ -134,11 +138,18 @@ router.patch("/users/me", requireAuth, async (req, res) => {
 
   try {
     const result = await pool.query(
-      `UPDATE users SET display_name = $1, bio = $2, email = $3,
+      `UPDATE users SET display_name = $1, bio = $2, email = $3, updated_at = NOW(),
               email_verified = CASE WHEN $5 THEN false ELSE email_verified END
        WHERE id = $4 RETURNING ${SAFE_USER_COLUMNS}`,
       [display_name || null, bio || null, nextEmail, req.user.id, emailChanged]
     );
+    // After the update commits, so a failed/rejected edit never leaves a
+    // history entry claiming a change that didn't happen.
+    await recordProfileChanges(req.user.id, req.user.id, {
+      display_name: { from: existing.display_name, to: display_name || null },
+      bio: { from: existing.bio, to: bio || null },
+      email: { from: existing.email, to: nextEmail },
+    });
     res.json(result.rows[0]);
   } catch (err) {
     if (err.code === "23505") return res.status(409).json({ error: "That email is already in use" });
@@ -157,9 +168,12 @@ router.post("/users/me/avatar", requireAuth, avatarUpload.single("avatar"), asyn
 
   const existing = await pool.query("SELECT avatar_path FROM users WHERE id = $1", [req.user.id]);
   const result = await pool.query(
-    `UPDATE users SET avatar_path = $1 WHERE id = $2 RETURNING ${SAFE_USER_COLUMNS}`,
+    `UPDATE users SET avatar_path = $1, updated_at = NOW() WHERE id = $2 RETURNING ${SAFE_USER_COLUMNS}`,
     [avatarPath, req.user.id]
   );
+  await recordProfileChanges(req.user.id, req.user.id, {
+    avatar_path: { from: existing.rows[0]?.avatar_path, to: avatarPath },
+  });
   await deleteUploadedFile(existing.rows[0]?.avatar_path);
   res.json(result.rows[0]);
 });
@@ -173,9 +187,12 @@ router.post("/users/me/banner", requireAuth, bannerUpload.single("banner"), asyn
 
   const existing = await pool.query("SELECT banner_path FROM users WHERE id = $1", [req.user.id]);
   const result = await pool.query(
-    `UPDATE users SET banner_path = $1 WHERE id = $2 RETURNING ${SAFE_USER_COLUMNS}`,
+    `UPDATE users SET banner_path = $1, updated_at = NOW() WHERE id = $2 RETURNING ${SAFE_USER_COLUMNS}`,
     [bannerPath, req.user.id]
   );
+  await recordProfileChanges(req.user.id, req.user.id, {
+    banner_path: { from: existing.rows[0]?.banner_path, to: bannerPath },
+  });
   await deleteUploadedFile(existing.rows[0]?.banner_path);
   res.json(result.rows[0]);
 });

@@ -563,7 +563,7 @@ export default function EditMangaPage() {
           {isPrivate && (
             <div className="visibility-roles">
               <span className="visibility-roles-hint">{t("editManga.visibleRolesHint")}</span>
-              <label className={`visibility-role-checkbox${visibilityLocked ? " visibility-role-checkbox-disabled" : ""}`}>
+              <label className={`check-control visibility-role-checkbox${visibilityLocked ? " check-control-disabled" : ""}`}>
                 <input
                   type="checkbox"
                   checked={visibleRoles.includes("member")}
@@ -572,7 +572,7 @@ export default function EditMangaPage() {
                 />
                 {t("role.member")}
               </label>
-              <label className={`visibility-role-checkbox${visibilityLocked ? " visibility-role-checkbox-disabled" : ""}`}>
+              <label className={`check-control visibility-role-checkbox${visibilityLocked ? " check-control-disabled" : ""}`}>
                 <input
                   type="checkbox"
                   checked={visibleRoles.includes("vvip")}
@@ -581,7 +581,7 @@ export default function EditMangaPage() {
                 />
                 {t("role.vvip")}
               </label>
-              <label className={`visibility-role-checkbox${visibilityLocked ? " visibility-role-checkbox-disabled" : ""}`}>
+              <label className={`check-control visibility-role-checkbox${visibilityLocked ? " check-control-disabled" : ""}`}>
                 <input
                   type="checkbox"
                   checked={visibleRoles.includes("uploader")}

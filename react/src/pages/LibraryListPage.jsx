@@ -107,7 +107,7 @@ export default function LibraryListPage() {
             <MarkdownEditor value={editDescription} onChange={setEditDescription} />
           </label>
 
-          <label className="library-private-checkbox">
+          <label className="check-control library-private-checkbox">
             <input type="checkbox" checked={editPrivate} onChange={(e) => setEditPrivate(e.target.checked)} />
             {t("library.private")}
           </label>
@@ -115,7 +115,7 @@ export default function LibraryListPage() {
           {/* A private list can't be shown on a public profile, so this is
               disabled (and forced off) while Private is ticked — the server
               enforces the same rule, this just makes it visible. */}
-          <label className="library-private-checkbox">
+          <label className="check-control library-private-checkbox">
             <input
               type="checkbox"
               checked={editShowOnProfile && !editPrivate}

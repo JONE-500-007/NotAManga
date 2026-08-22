@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
@@ -8,19 +8,8 @@ export default function Navbar() {
   const { lang, setLang, t } = useLanguage();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [adminMenuOpen, setAdminMenuOpen] = useState(false);
-  const adminMenuRef = useRef(null);
 
   const closeMenu = () => setMenuOpen(false);
-
-  useEffect(() => {
-    if (!adminMenuOpen) return;
-    const handleClickOutside = (e) => {
-      if (adminMenuRef.current && !adminMenuRef.current.contains(e.target)) setAdminMenuOpen(false);
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [adminMenuOpen]);
 
   const handleLogout = async () => {
     closeMenu();
@@ -63,40 +52,12 @@ export default function Navbar() {
               {t("nav.myLibrary")}
             </Link>
             {user.role === "admin" && (
-              <div className="admin-menu" ref={adminMenuRef}>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  onClick={() => setAdminMenuOpen((open) => !open)}
-                  aria-expanded={adminMenuOpen}
-                >
-                  {t("nav.admin")}
-                  <span className={`admin-menu-chevron${adminMenuOpen ? " open" : ""}`}>&#9662;</span>
-                </button>
-                {adminMenuOpen && (
-                  <div className="admin-menu-panel">
-                    <Link to="/admin/dashboard" className="admin-menu-item" onClick={() => setAdminMenuOpen(false)}>
-                      {t("nav.adminDashboard")}
-                    </Link>
-                    <Link to="/admin/categories" className="admin-menu-item" onClick={() => setAdminMenuOpen(false)}>
-                      {t("nav.adminCategories")}
-                    </Link>
-                    <Link to="/admin/tags" className="admin-menu-item" onClick={() => setAdminMenuOpen(false)}>
-                      {t("nav.adminTags")}
-                    </Link>
-                    <Link to="/admin/link-sites" className="admin-menu-item" onClick={() => setAdminMenuOpen(false)}>
-                      {t("nav.adminLinkSites")}
-                    </Link>
-                    <Link
-                      to="/admin/announcements"
-                      className="admin-menu-item"
-                      onClick={() => setAdminMenuOpen(false)}
-                    >
-                      {t("nav.adminAnnouncements")}
-                    </Link>
-                  </div>
-                )}
-              </div>
+              <Link to="/admin" className="btn btn-ghost">
+                <span className="material-symbols-outlined" aria-hidden="true">
+                  shield_person
+                </span>
+                {t("nav.admin")}
+              </Link>
             )}
             <Link to="/profile" className="navbar-user">
               {user.avatar_path ? (
@@ -172,24 +133,12 @@ export default function Navbar() {
                   {t("nav.myLibrary")}
                 </Link>
                 {user.role === "admin" && (
-                  <div className="mobile-menu-admin-group">
-                    <span className="mobile-menu-admin-label">{t("nav.admin")}</span>
-                    <Link to="/admin/dashboard" className="btn btn-ghost" onClick={closeMenu}>
-                      {t("nav.adminDashboard")}
-                    </Link>
-                    <Link to="/admin/categories" className="btn btn-ghost" onClick={closeMenu}>
-                      {t("nav.adminCategories")}
-                    </Link>
-                    <Link to="/admin/tags" className="btn btn-ghost" onClick={closeMenu}>
-                      {t("nav.adminTags")}
-                    </Link>
-                    <Link to="/admin/link-sites" className="btn btn-ghost" onClick={closeMenu}>
-                      {t("nav.adminLinkSites")}
-                    </Link>
-                    <Link to="/admin/announcements" className="btn btn-ghost" onClick={closeMenu}>
-                      {t("nav.adminAnnouncements")}
-                    </Link>
-                  </div>
+                  <Link to="/admin" className="btn btn-ghost" onClick={closeMenu}>
+                    <span className="material-symbols-outlined" aria-hidden="true">
+                      shield_person
+                    </span>
+                    {t("nav.admin")}
+                  </Link>
                 )}
                 <button className="btn btn-ghost" onClick={handleLogout}>
                   {t("nav.logout")}
