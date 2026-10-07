@@ -9,6 +9,12 @@ import ReaderSettingsPanel from "../components/ReaderSettingsPanel";
 
 const HIDE_DELAY_MS = 2500;
 
+// How many groups (single pages, or spreads in double-page mode) paged mode
+// loads around the current one, so flipping forward/back doesn't wait on
+// the network.
+const PRELOAD_AHEAD = 3;
+const PRELOAD_BEHIND = 1;
+
 function formatGroupLabel(group) {
   if (!group) return "";
   const first = group.startIndex + 1;
@@ -72,6 +78,12 @@ export default function ReaderPage() {
   const groupSize = settings.doublePage ? 2 : 1;
   const totalPages = chapter?.pages.length ?? 0;
 
+  // A spread's page order is a property of the work itself (manga pages
+  // were drawn to sit first-page-on-the-right), so it follows the format
+  // chosen at upload — not the Direction setting, which only decides which
+  // arrow key / click zone means "next".
+  const spreadRtl = manga ? manga.format !== "comic" : false;
+
   const groups = useMemo(() => {
     if (!chapter) return [];
     const result = [];
@@ -79,15 +91,38 @@ export default function ReaderPage() {
       const groupPages = chapter.pages.slice(i, i + groupSize);
       result.push({
         startIndex: i,
-        pages: settings.direction === "rtl" ? [...groupPages].reverse() : groupPages,
+        pages: spreadRtl ? [...groupPages].reverse() : groupPages,
       });
     }
     return result;
-  }, [chapter, groupSize, settings.direction]);
+  }, [chapter, groupSize, spreadRtl]);
 
   useEffect(() => {
     setGroupIndex((i) => Math.min(i, Math.max(0, groups.length - 1)));
   }, [groups.length]);
+
+  // Paged mode keeps every group it has shown (plus a few ahead) mounted as
+  // hidden <img>s rather than rendering only the current one. Preloading via
+  // `new Image()` wouldn't help here: each /uploads/ request redirects to a
+  // freshly signed R2 URL (see node/routes/uploadAccess.routes.js), so a
+  // second request for the same page never hits the browser cache. Keeping
+  // the <img> element itself alive is the only way a page that has already
+  // loaded stays instantly available when the reader flips back to it.
+  // Tied to the `groups` it was built for, so a new chapter or a double-page
+  // toggle (which regroups every page) starts from an empty set. Updated
+  // during render rather than in an effect so the newly mounted pages start
+  // loading in the same paint as the page flip.
+  const [mounted, setMounted] = useState({ groups, set: new Set() });
+  const mountedGroups = mounted.groups === groups ? mounted.set : new Set();
+  if (settings.mode === "paged" && groups.length > 0) {
+    const from = Math.max(0, groupIndex - PRELOAD_BEHIND);
+    const to = Math.min(groups.length - 1, groupIndex + PRELOAD_AHEAD);
+    let next = null;
+    for (let i = from; i <= to; i++) {
+      if (!mountedGroups.has(i)) (next ??= new Set(mountedGroups)).add(i);
+    }
+    if (next || mounted.groups !== groups) setMounted({ groups, set: next ?? mountedGroups });
+  }
 
   const goToPrevGroup = useCallback(() => {
     if (groupIndex === 0) {
@@ -237,7 +272,6 @@ export default function ReaderPage() {
 
   if (!chapter) return <div className="page-loading">{t("common.loading")}</div>;
 
-  const activeGroup = groups[groupIndex];
   const isFirstGroup = groupIndex === 0;
   const isLastGroup = groupIndex + 1 >= groups.length;
   const prevDisabled = isFirstGroup && !chapter.prevChapterId;
@@ -339,19 +373,29 @@ export default function ReaderPage() {
             disabled={leftZoneDisabled}
             aria-label={settings.direction === "ltr" ? t("reader.prev") : t("reader.next")}
           />
-          <div
-            className={`reader-spread${activeGroup?.pages.length > 1 ? " reader-spread-double" : ""}`}
-            onClick={showChrome}
-          >
-            {activeGroup?.pages.map((page) => (
-              <img
-                key={page.page_number}
-                src={page.image_path}
-                alt={`Page ${page.page_number}`}
-                className="reader-image"
-              />
-            ))}
-          </div>
+          {groups.map((group, index) => {
+            const isActive = index === groupIndex;
+            if (!isActive && !mountedGroups.has(index)) return null;
+            return (
+              <div
+                key={group.startIndex}
+                className={`reader-spread${group.pages.length > 1 ? " reader-spread-double" : ""}`}
+                style={isActive ? undefined : { display: "none" }}
+                onClick={showChrome}
+              >
+                {group.pages.map((page) => (
+                  <img
+                    key={page.page_number}
+                    src={page.image_path}
+                    alt={`Page ${page.page_number}`}
+                    className="reader-image"
+                    decoding="async"
+                    fetchPriority={isActive ? "high" : "low"}
+                  />
+                ))}
+              </div>
+            );
+          })}
           <button
             className="reader-nav-zone reader-nav-next"
             onClick={goRightZone}

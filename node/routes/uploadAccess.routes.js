@@ -16,6 +16,17 @@ const { getPresignedGetUrl } = require("../utils/r2Client");
 // straight to signing — same bucket, just no visibility check first.
 const router = express.Router();
 
+// A bare `res.status(404).end()` has no Content-Type and an empty body, which
+// iOS browsers treat as an unknown file and offer to download ("-1 bytes")
+// instead of showing anything — e.g. when a restored tab reopens a private
+// page's image after the session cookie has expired. A top-level navigation
+// gets sent to the work's own page instead, where the SPA can show its normal
+// private/log-in state; an <img> request just gets a typed 404.
+function denyWorkFile(req, res, mangaId) {
+  if (req.get("Sec-Fetch-Dest") === "document") return res.redirect(`/manga/${mangaId}`);
+  res.status(404).type("text/plain").send("Not found");
+}
+
 // RegExp routes (rather than Express path-pattern strings) sidestep
 // path-to-regexp's wildcard/custom-regex syntax entirely, so these don't
 // need to track which syntax the installed Express major version expects.
@@ -31,7 +42,7 @@ router.get(UPLOAD_WORK_PATH, optionalAuth, async (req, res) => {
     [mangaId, workType]
   );
   const manga = mangaResult.rows[0];
-  if (!manga) return res.status(404).end();
+  if (!manga) return denyWorkFile(req, res, mangaId);
 
   // canViewManga returns true immediately for a public manga without ever
   // looking at visibleRoles, so the extra query below only runs for the
@@ -43,7 +54,7 @@ router.get(UPLOAD_WORK_PATH, optionalAuth, async (req, res) => {
       )
     : [];
 
-  if (!canViewManga(req.user, manga, visibleRoles)) return res.status(404).end();
+  if (!canViewManga(req.user, manga, visibleRoles)) return denyWorkFile(req, res, mangaId);
 
   const url = await getPresignedGetUrl(`${workType}/${mangaId}/${relPath}`);
   // The signed URL expires in a few minutes, so this redirect must never be

@@ -9,6 +9,6 @@ Disallow: /profile
 Disallow: /library
 Disallow: /upload
 Disallow: /admin
-Disallow: /api/
+Disallow: /api/auth/
 
 Sitemap: https://www.justsomemanga.com/sitemap.xml
