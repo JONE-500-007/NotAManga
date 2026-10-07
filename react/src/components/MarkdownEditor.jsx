@@ -1,5 +1,10 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { renderInlineMarkdown, renderMarkdown } from "../utils/renderMarkdown";
+
+// Auto-grow stops at this fraction of the window height; past that the box
+// scrolls (and can still be dragged taller by hand).
+const AUTO_GROW_MAX_VIEWPORT = 0.7;
+const AUTO_GROW_MIN_CAP_PX = 320; // floor for very short windows
 
 function wrapSelection(field, before, after, placeholder) {
   const { selectionStart, selectionEnd, value } = field;
@@ -85,6 +90,19 @@ export default function MarkdownEditor({
     colorInput.addEventListener("change", handleColorChange);
     return () => colorInput.removeEventListener("change", handleColorChange);
   }, [onChange]);
+
+  // Grow the textarea to fit what's typed (up to a cap) instead of leaving a
+  // fixed 5-row box with a scrollbar — once that scrollbar appears it sits
+  // on top of the resize grip, so the box looks like it can't be stretched.
+  // Grow-only: a box the user has dragged taller keeps its height, and one
+  // that's already tall enough isn't shrunk back on every keystroke.
+  useLayoutEffect(() => {
+    const field = fieldRef.current;
+    if (!multiline || !field) return;
+    const cap = Math.max(window.innerHeight * AUTO_GROW_MAX_VIEWPORT, AUTO_GROW_MIN_CAP_PX);
+    const needed = field.scrollHeight + field.offsetHeight - field.clientHeight;
+    if (needed > field.offsetHeight) field.style.height = `${Math.min(needed, Math.max(cap, field.offsetHeight))}px`;
+  }, [value, multiline]);
 
   const Field = multiline ? "textarea" : "input";
   const previewHtml = useMemo(

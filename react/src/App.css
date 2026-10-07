@@ -2770,7 +2770,7 @@ input[type="file"]::file-selector-button:hover {
 }
 
 textarea.markdown-field {
-  min-height: 100px;
+  min-height: 160px;
 }
 
 /* The browser's own resize grabber is a hairline triangle in a near-black
