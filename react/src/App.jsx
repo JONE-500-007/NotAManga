@@ -32,6 +32,7 @@ import TagMangaPage from "./pages/TagMangaPage";
 import ProfilePage from "./pages/ProfilePage";
 import MyLibraryPage from "./pages/MyLibraryPage";
 import LibraryListPage from "./pages/LibraryListPage";
+import CanonicalLink from "./components/CanonicalLink";
 import "./App.css";
 
 function Layout() {
@@ -50,6 +51,7 @@ function App() {
     <AuthProvider>
       <LanguageProvider>
         <BrowserRouter>
+          <CanonicalLink />
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
